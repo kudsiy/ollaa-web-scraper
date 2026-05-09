@@ -1,0 +1,241 @@
+
+import re
+import logging
+from typing import Dict, Any, List, Optional
+from datetime import datetime
+from parsers.amharic_parser import AmharicParser
+
+logger = logging.getLogger(__name__)
+
+class SemanticProcessingEngine:
+    """
+    12-step Semantic Processing Engine for Ethiopian property listings.
+    """
+
+    def __init__(self):
+        self.amharic_parser = AmharicParser()
+        self.developers = [
+            "Noah", "Gift", "Ayat", "Flintstone", "Enessa", "Yotek", "Sunshine",
+            "Tracon", "Ovid", "Metropolitan", "Varnero", "Zemen", "Eagle Hills",
+            "Pluto", "Great Abyssinia", "Noc", "Tsehay", "Goh", "Habesha",
+            "Enat", "Roha", "Bale", "DMC", "Mulugeta", "Yosef", "Taza", "Gishen",
+            "Ababa", "Lideta", "Federal", "Commercial", "Kurat", "Real Estate",
+            "Access", "Yugo", "Grand", "Luxury", "Adera", "Sega", "Yemane",
+            "Bete", "Tsedey", "Warka", "Abyssinia", "Midroc", "Varnero"
+        ]
+        
+        self.locations = {
+            "Bole": [
+                "Bole", "ቦሌ", "Bole Atlas", "Bole Medhanialem", "Bole Japan", 
+                "Bole Bulbula", "Bulbula", "Imperial", "22", "Haya Hulet",
+                "Gerji", "ገርጂ", "Summit", "ሰሚት", "Jackros", "ጃክሮስ",
+                "Goro", "ጎሮ", "Wello Sefer", "ወሎ ሰፈር", "Rwanda", "Friendship"
+            ],
+            "Yeka": [
+                "Yeka", "የካ", "Megenagna", "ሜገናኛ", "CMC", "Summit", "Ayat", "አያት", 
+                "Gurd Shola", "ጉርድ ሾላ", "Kotebe", "ኮተቤ", "Figa", "ፊጋ",
+                "Kara", "ካራ", "Salite Mihret", "ሳሊተ ምህረት", "Cheshire", "Ferensay"
+            ],
+            "Kirkos": [
+                "Kirkos", "ቂርቆስ", "Kazanchis", "ካዛንቺስ", "Mexico", "ሜክሲኮ", 
+                "Olympia", "ኦሊምፒያ", "Meskel Square", "መስቀል አደባባይ", "Lancha", "ላንቻ", 
+                "Gotera", "ጎተራ", "Riche", "ሪቼ", "Sarbet", "ሳርቤት", "Bambis", "ባምቢስ"
+            ],
+            "Arada": [
+                "Arada", "አራዳ", "Piassa", "ፒያሳ", "4 Kilo", "አራት ኪሎ", "6 Kilo", "ስድስት ኪሎ", 
+                "Somali Tera", "ሶማሌ ተራ", "Churchill", "ቸርቺል", "Kebena", "ቀበና"
+            ],
+            "Lideta": [
+                "Lideta", "ልደታ", "Geja Sefer", "ገጃ ሰፈር", "Balcha", "ባልቻ", "Mexico", "Abnet", "አብነት"
+            ],
+            "Nifas Silk Lafto": [
+                "Nifas Silk", "Lafto", "ላፍቶ", "Lebu", "ለቡ", "Sarbet", "ሳርቤት", 
+                "Jamo", "ጀሞ", "Haile Garment", "ሃይሌ ጋርመንት", "Mekanisa", "መካኒሳ",
+                "Kera", "ቄራ", "Gotera", "Vayer", "Vayerero", "Hana"
+            ],
+            "Kolfe Keranio": [
+                "Kolfe", "Keranio", "ኮልፌ", "ቀራኒዮ", "Zenebework", "ዘነበወርቅ", 
+                "Ayertena", "አየር ጤና", "Total", "ቶታል", "Alem Bank", "ዓለም ባንክ",
+                "Bethel", "ቤቴል", "Asko", "አስኮ", "Wingate", "ዊንጌት"
+            ],
+            "Akaki Kality": [
+                "Akaki", "አቃቂ", "Kality", "ቃሊቲ", "Tulu Dimtu", "ቱሉ ዲምቱ", 
+                "Koye Feche", "ቆዬ ፈጬ", "Gelala", "ገላላ", "Sari"
+            ],
+            "Gullele": [
+                "Gullele", "ጉለሌ", "Shiromeda", "ሽሮ ሜዳ", "Addisu Gebeya", "አዲሱ ገበያ", 
+                "Wingate", "ዊንጌት", "Pasta Factory", "Entoto", "እንጦጦ"
+            ],
+            "Addis Ketema": [
+                "Addis Ketema", "አዲስ ከተማ", "Merkato", "መሪካቶ", "Autobus Tera", "አውቶብስ ተራ",
+                "Sebategna", "ሰባተኛ", "Abnet", "አብነት"
+            ],
+            "Sheger City": [
+                "Sheger", "ሸገር", "Sululta", "ሱሉልታ", "Burayu", "ቡራዩ", 
+                "Sebeta", "ሰበታ", "Legetafo", "ለገጣፎ", "Sendafa", "ሰንዳፋ",
+                "Gelan", "ገላን", "Dukem", "ዱከም", "Bishoftu", "ቢሾፍቱ"
+            ]
+        }
+
+    def process(self, raw_listing: Dict[str, Any]) -> Dict[str, Any]:
+        """Runs the 12-step pipeline on a listing."""
+        text = (raw_listing.get("title", "") + " " + raw_listing.get("description", "")).strip()
+        normalized_text = self.amharic_parser.normalize_text(text)
+        
+        processed = raw_listing.copy()
+        
+        # 1. Intent Classification
+        processed["intent"] = self._classify_intent(normalized_text)
+        
+        # 2. Listing Class
+        processed["listing_class"] = self._classify_listing(normalized_text)
+        
+        # 3. Property Type/Subtype
+        processed["property_type"], processed["property_subtype"] = self._detect_property_type(normalized_text)
+        
+        # 4. Area Resolution
+        processed["area_sqm"], processed["area_type"] = self._resolve_area(normalized_text)
+        
+        # 5 & 10. Financial Extraction & Currency Detection
+        financials = self._extract_financials(normalized_text)
+        processed.update(financials)
+        
+        # 6. Finish States
+        processed["finish_state"] = self._detect_finish_state(normalized_text)
+        
+        # 7. Developer Recognition
+        processed["developer"] = self._recognize_developer(normalized_text)
+        
+        # 8. Location Map
+        processed["refined_location"] = self._map_location(normalized_text)
+        
+        # 9. Contact Info
+        processed["contacts"] = self._extract_contacts(normalized_text)
+        
+        # 11. Floor Level
+        processed["floor_level"] = self._extract_floor_level(normalized_text)
+        
+        # 12. Eligibility Logic
+        processed["valuation_eligible"] = self._check_eligibility(processed)
+        
+        return processed
+
+    def _classify_intent(self, text: str) -> str:
+        sale_score = len(re.findall(r'sale|ሽያጭ|ሺያጭ|ለሽያጭ|የሚሸጥ', text, re.I))
+        rent_score = len(re.findall(r'rent|ኪራይ|ለኪራይ|የሚከራይ', text, re.I))
+        
+        if sale_score > rent_score:
+            return "SALE"
+        elif rent_score > sale_score:
+            return "RENT"
+        return "SALE"  # Default
+
+    def _classify_listing(self, text: str) -> str:
+        if re.search(r'promotional|discount|special offer|ቅናሽ|ፕሮሞሽን', text, re.I):
+            return "PROMOTIONAL"
+        if re.search(r'wanted|inquiry|እፈልጋለሁ|ፈላጊ', text, re.I):
+            return "INQUIRY"
+        for dev in self.developers:
+            if dev.lower() in text.lower():
+                return "DEVELOPER"
+        return "DIRECT_LISTING"
+
+    def _detect_property_type(self, text: str) -> (str, Optional[str]):
+        if re.search(r'40/60|20/80|ኮንዶሚኒየም|condominium|condo', text, re.I):
+            subtype = "40/60" if "40/60" in text else ("20/80" if "20/80" in text else None)
+            return "CONDO", subtype
+        if re.search(r'apartment|አፓርታማ|flat', text, re.I):
+            return "APARTMENT", None
+        if re.search(r'villa|ቪላ|G\+\d', text, re.I):
+            return "VILLA", None
+        if re.search(r'land|መሬት|plot', text, re.I):
+            return "LAND", None
+        if re.search(r'warehouse|መጋዘን', text, re.I):
+            return "WAREHOUSE", None
+        if re.search(r'office|ቢሮ', text, re.I):
+            return "OFFICE", None
+        return "HOUSE", None
+
+    def _resolve_area(self, text: str) -> (Optional[float], str):
+        # Look for patterns like 200 sqm, 200 ካሬ
+        area_match = re.search(r'(\d+(?:\.\d+)?)\s*(?:sqm|sq\.m|ካሬ|m2|M2)', text, re.I)
+        area = float(area_match.group(1)) if area_match else None
+        
+        area_type = "PLOTTED"
+        if re.search(r'built-up|ካርታ|ያረፈበት', text, re.I):
+            area_type = "BUILT_UP"
+            
+        return area, area_type
+
+    def _extract_financials(self, text: str) -> Dict[str, Any]:
+        results = {"price": None, "currency": "ETB", "bank_loan_pct": None, "down_payment": None}
+        
+        # Currency Detection
+        if re.search(r'\$|USD|ዶላር', text, re.I):
+            results["currency"] = "USD"
+        
+        # Price extraction (basic)
+        price_match = re.search(r'(?:price|ዋጋ|ብር|ETB)?\s*([\d,]+(?:\.\d+)?)\s*(?:million|ሚሊዮን|M|k|ሺህ)?', text, re.I)
+        if price_match:
+            try:
+                val = price_match.group(1).replace(',', '')
+                price = float(val)
+                if 'million' in price_match.group(0).lower() or 'ሚሊዮን' in price_match.group(0).lower() or 'M' in price_match.group(0):
+                    price *= 1_000_000
+                elif 'k' in price_match.group(0).lower() or 'ሺህ' in price_match.group(0).lower():
+                    price *= 1_000
+                results["price"] = price
+            except:
+                pass
+        
+        # Loan %
+        loan_match = re.search(r'(\d+)\s*%\s*(?:loan|ባንክ|እዳ)', text, re.I)
+        if loan_match:
+            results["bank_loan_pct"] = float(loan_match.group(1))
+            
+        # Down payment
+        down_match = re.search(r'(?:down payment|ቅድመ ክፍያ)\s*([\d,]+(?:\.\d+)?)', text, re.I)
+        if down_match:
+            results["down_payment"] = float(down_match.group(1).replace(',', ''))
+            
+        return results
+
+    def _detect_finish_state(self, text: str) -> str:
+        if re.search(r'unfinished|ያልተጠናቀቀ|ጥሬ|shell', text, re.I):
+            return "UNFINISHED"
+        if re.search(r'furnished|ቤት እቃ ያለው|የተሟላ', text, re.I):
+            return "FURNISHED"
+        if re.search(r'semi-finished|ከፊል የተጠናቀቀ', text, re.I):
+            return "SEMI_FINISHED"
+        return "FINISHED"
+
+    def _recognize_developer(self, text: str) -> Optional[str]:
+        for dev in self.developers:
+            if dev.lower() in text.lower():
+                return dev
+        return None
+
+    def _map_location(self, text: str) -> Optional[str]:
+        for zone, keywords in self.locations.items():
+            for kw in keywords:
+                if kw.lower() in text.lower():
+                    return zone
+        return None
+
+    def _extract_contacts(self, text: str) -> List[str]:
+        # Ethiopian phone numbers: +251..., 09..., 07...
+        phones = re.findall(r'(?:\+251|0)[79]\d{8}', text)
+        # Telegram handles
+        tg_handles = re.findall(r'@[\w\d_]+', text)
+        return list(set(phones + tg_handles))
+
+    def _extract_floor_level(self, text: str) -> Optional[int]:
+        floor_match = re.search(r'(\d+)(?:st|nd|rd|th)?\s*(?:floor|ፎቅ)', text, re.I)
+        if floor_match:
+            return int(floor_match.group(1))
+        return None
+
+    def _check_eligibility(self, processed: Dict[str, Any]) -> bool:
+        # Valuation eligible if we have price, location, property_type and area
+        required = ["price", "refined_location", "property_type", "area_sqm"]
+        return all(processed.get(f) is not None for f in required)
