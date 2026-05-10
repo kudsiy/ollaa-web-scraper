@@ -20,30 +20,14 @@ from etl.normalizer import Normalizer
 from etl.deduplicator import Deduplicator
 from etl.db_writer import DBWriter
 from scrapers.base_scraper import ScrapeResult
-from scrapers.generic_scraper import GenericScraper
-from scrapers.telegram_scraper import TelegramScraper
 from source_registry import SOURCE_REGISTRY, iter_sources
-from scrapers.banks.addislist_scraper import AddisListScraper
-from scrapers.banks.abyssinia_scraper import AbyssiniaBankScraper
-from scrapers.banks.berhan_scraper import BerhanBankScraper
-from scrapers.banks.abay_scraper import AbayBankScraper
-from scrapers.banks.dbe_scraper import DBEScraper
-from scrapers.banks.amhara_scraper import AmharaBankScraper
-from scrapers.banks.auctionet_scraper import AuctionEthiopiaScraper
-from scrapers.banks.delala_scraper import DelalaAppScraper
-from scrapers.tenders.merkato_scraper import BaseTenderScraper as MerkatoTenderScraper
-from scrapers.tenders.ethiopiantender_scraper import EthiopianTenderScraper
-from scrapers.tenders.arifchereta_scraper import ArifCheretaScraper
-from scrapers.tenders.reportertenders_scraper import ReporterTendersScraper
-from scrapers.tenders.habeshatender_scraper import HabeshaTenderScraper
+from scrapers.banks import (
+    AddisListScraper, AbyssiniaBankScraper, BerhanBankScraper, 
+    AmharaBankScraper, CBEScraper, AwashBankScraper, 
+    DashenBankScraper, ZemenBankScraper, CoopBankScraper
+)
 from scrapers.tenders.waliatender_scraper import WaliaTenderScraper
 from scrapers.listings.engocha_scraper import EngochaScraper
-from scrapers.listings.betdelala_scraper import BetDelalaScraper
-from scrapers.listings.livingethio_scraper import LivingEthioScraper
-from scrapers.listings.ethiorealestates_scraper import EthioRealEstatesScraper
-from scrapers.listings.ethiopiapropertycentre_scraper import EthiopiaPropertyCentreScraper
-from scrapers.listings.ethiopiarealty_scraper import EthiopiaRealtyScraper
-from scrapers.listings.realethio_scraper import RealEthioScraper
 
 
 logger = logging.getLogger(__name__)
@@ -79,36 +63,17 @@ class ScraperScheduler:
             "addislist": AddisListScraper(),
             "abyssinia": AbyssiniaBankScraper(),
             "berhan": BerhanBankScraper(),
-            "abay": AbayBankScraper(),
-            "dbe": DBEScraper(),
             "amhara": AmharaBankScraper(),
-            "auctionet": AuctionEthiopiaScraper(),
-            "delala": DelalaAppScraper(),
-            "merkato": MerkatoTenderScraper(),
-            "ethiopiantender": EthiopianTenderScraper(),
-            "arifchereta": ArifCheretaScraper(),
-            "reportertenders": ReporterTendersScraper(),
-            "habeshatender": HabeshaTenderScraper(),
+            "cbe": CBEScraper(),
+            "awash": AwashBankScraper(),
+            "dashen": DashenBankScraper(),
+            "zemen": ZemenBankScraper(),
+            "coop": CoopBankScraper(),
             "waliatender": WaliaTenderScraper(),
             "engocha": EngochaScraper(),
-            "betdelala": BetDelalaScraper(),
-            "livingethio": LivingEthioScraper(),
-            "ethiorealestates": EthioRealEstatesScraper(),
-            "ethiopiapropertycentre": EthiopiaPropertyCentreScraper(),
-            "ethiopiarealty": EthiopiaRealtyScraper(),
-            "realethio": RealEthioScraper(),
         }
 
-        # Dynamically add remaining sources from registry using GenericScraper or TelegramScraper
-        for key, config in SOURCE_REGISTRY.items():
-            if key not in self.scrapers:
-                try:
-                    if config.get("category") == "telegram":
-                        self.scrapers[key] = TelegramScraper(key)
-                    else:
-                        self.scrapers[key] = GenericScraper(key)
-                except Exception as e:
-                    logger.error(f"Failed to initialize scraper for {key}: {e}")
+
         
         self._scrape_history: List[Dict[str, Any]] = []
         self._total_stats = {
@@ -190,10 +155,6 @@ class ScraperScheduler:
             self._run_scraper_group, "listings"
         )
         
-        schedule.every(scheduler_config.listings_interval_minutes).minutes.do(
-            self._run_scraper_group, "telegram"
-        )
-        
         schedule.every(24).hours.do(self._cleanup_old_data)
         
         logger.info("Scheduled jobs registered")
@@ -208,8 +169,7 @@ class ScraperScheduler:
         category_map = {
             "banks": ["institutional_auctions", "auction_aggregators"],
             "tenders": ["auction_aggregators"],
-            "listings": ["market_listings", "specialized_platforms"],
-            "telegram": ["telegram"]
+            "listings": ["market_listings", "specialized_platforms"]
         }
         
         categories = category_map.get(group, [group])
@@ -222,16 +182,9 @@ class ScraperScheduler:
         # If no scrapers found by category, try the hardcoded mapping for backward compatibility
         if not scraper_names:
             scraper_mapping = {
-                "banks": ["addislist", "abyssinia", "berhan", "abay", "dbe", "amhara", "auctionet", "delala"],
-                "tenders": [
-                    "merkato", "ethiopiantender", "arifchereta", 
-                    "reportertenders", "habeshatender", "waliatender"
-                ],
-                "listings": [
-                    "engocha", "betdelala", "livingethio", 
-                    "ethiorealestates", "ethiopiapropertycentre",
-                    "ethiopiarealty", "realethio"
-                ],
+                "banks": ["addislist", "abyssinia", "berhan", "amhara", "cbe", "awash", "dashen", "zemen", "coop"],
+                "tenders": ["waliatender"],
+                "listings": ["engocha"],
             }
             scraper_names = scraper_mapping.get(group, [])
         
