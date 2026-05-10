@@ -2,6 +2,8 @@
 Walia Tender scraper.
 """
 import logging
+from typing import Optional
+from scrapers.base_scraper import ScrapedListing, ScrapeResult
 from scrapers.tenders.merkato_scraper import BaseTenderScraper
 
 logger = logging.getLogger(__name__)
