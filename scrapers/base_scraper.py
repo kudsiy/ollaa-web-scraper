@@ -220,19 +220,29 @@ class PlaywrightScraper(BaseScraper):
     
     async def _init_browser(self):
         """Initialize Playwright browser (to be called from async context)."""
-        from playwright.async_api import async_playwright
-        self.playwright = await async_playwright().start()
-        self.browser = await self.playwright.chromium.launch(headless=True)
-        self.context = await self.browser.new_context(
-            user_agent=self.config.scraper.user_agent
-        )
+        try:
+            from playwright.async_api import async_playwright
+            self.playwright = await async_playwright().start()
+            self.browser = await self.playwright.chromium.launch(headless=True)
+            self.context = await self.browser.new_context(
+                user_agent=self.config.scraper.user_agent
+            )
+        except ImportError:
+            self.logger.error("Playwright not installed.")
+            raise
+        except Exception as e:
+            self.logger.error(f"Failed to initialize Playwright: {e}")
+            raise
     
     async def _close_browser(self):
         """Close Playwright browser."""
-        if self.browser:
-            await self.browser.close()
-        if self.playwright:
-            await self.playwright.stop()
+        try:
+            if self.browser:
+                await self.browser.close()
+            if hasattr(self, 'playwright') and self.playwright:
+                await self.playwright.stop()
+        except Exception as e:
+            self.logger.warning(f"Error closing browser: {e}")
     
     async def _fetch_page_js(self, url: str) -> Optional[BeautifulSoup]:
         """Fetch a URL using Playwright for JS rendering."""

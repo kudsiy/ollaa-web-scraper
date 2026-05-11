@@ -75,14 +75,6 @@ SOURCE_REGISTRY = {
         "scrapability": "blocked",
         "status": "blocked",  # Connection refused
     },
-    "dashen": {
-        "name": "Dashen Bank",
-        "url": "https://dashenbanksc.com",
-        "category": "institutional_auctions",
-        "valuation_signal": "primary_auction",
-        "scrapability": "verified_no_data",  # Site accessible but no property content
-        "status": "verified_no_data",  # Bids/Tenders page is for bank supplies, not property
-    },
     "berhan": {
         "name": "Berhan Bank",
         "url": "https://berhanbanksc.com",

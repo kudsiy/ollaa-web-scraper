@@ -51,8 +51,8 @@ class KeywordBankScraper(BaseScraper):
         # Common containers for bank notices
         containers = soup.select('article, .post, .entry, tr, .tender-item, .auction-item, .card, .notice-item, li')
         
-        # Keywords: የሐራጅ (auction) or ሽያጭ (sale) or ቤት (house/property)
-        keywords = ["የሐራጅ", "ሽያጭ", "ቤት"]
+        # Keywords for property auctions/sales
+        keywords = ["የሐራጅ", "ጨረታ", "ጨርታ", "ሃራጅ", "ሐራጅ", "ማስታወቅያ", "ሱሚ", "ሽያጭ", "ሽያይ", "ለሽጡ", "ቤት", "ህንጻ", "መሬት"]
         
         for container in containers:
             text = container.get_text()

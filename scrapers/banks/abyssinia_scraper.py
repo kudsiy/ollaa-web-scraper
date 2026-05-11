@@ -13,5 +13,5 @@ class AbyssiniaBankScraper(KeywordBankScraper):
         super().__init__(
             source_name="Bank of Abyssinia",
             base_url="https://www.bankofabyssinia.com",
-            auction_paths=["/የሐራጅ-ሽያጭ-ማስታወቂያ"]
+            auction_paths=["/tender", "/notice"]
         )

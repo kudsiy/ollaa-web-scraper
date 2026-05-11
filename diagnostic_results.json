@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-05-11T19:06:06.862680+00:00",
+  "timestamp": "2026-05-11T19:29:40.242448+00:00",
   "import_tests": [
     {
       "module": "requests",
@@ -83,18 +83,6 @@
       "sample_listing": null
     },
     {
-      "scraper": "Dashen Bank",
-      "class_path": "scrapers.banks.dashen_scraper.DashenBankScraper",
-      "status": "success",
-      "listings_found": 0,
-      "errors": [
-        "No listings found"
-      ],
-      "has_price": false,
-      "has_location": false,
-      "sample_listing": null
-    },
-    {
       "scraper": "Zemen Bank",
       "class_path": "scrapers.banks.zemen_scraper.ZemenBankScraper",
       "status": "success",
@@ -110,14 +98,14 @@
       "scraper": "Abyssinia Bank",
       "class_path": "scrapers.banks.abyssinia_scraper.AbyssiniaBankScraper",
       "status": "working",
-      "listings_found": 2,
+      "listings_found": 8,
       "errors": [],
       "has_price": false,
       "has_location": true,
       "sample_listing": {
         "title": "Tenders",
         "price": null,
-        "location": "\u12a0\u12f2\u1235 \u12a0\u1260\u1263 \u12a8\u1270\u121b \u1242\u122d\u1246\u1235 \u12ad/\u12a8\u1270\u121b \u12c8\u1228\u12f3 4 \u12a0\u120d\u1353\u12cd\u120e \u1205\u1295\u133b 3\u129b \u134e\u1245 \u12e8\u1263\u1295\u12a9 \u1205\u130d \u1218\u121d\u122a\u12eb \u1262\u122e \u1290\u12cd\u1361\u1361\u1208\u1270\u1328\u121b\u122a \u1218\u1228\u1303 \u1260\u1235\u120d\u12ad \u1241\u1325\u122d 0115 54 67 37/36 \u12a0",
+        "location": "\u1260\u1275\u130d\u122b\u12ed \u1265\u1214\u122b\u12ca \u12ad\u120d\u120b\u12ca \u1218\u1295\u130d\u1235\u1275\u1363 \u123d\u1228\u1295\u12f0\u1235\u120b\u1234 \u12a8\u1270\u121b\u1363 \u1240\u1260\u120c 04\u1363 \u12a0\u12f0\u1263\u1263\u12ed \u1283\u12e8\u120e\u121d \u1260\u121a\u1308\u1298\u12cd \u12e8\u1263\u1295\u12a9 \u123d\u1228\u1295\u12f0\u1235\u120b\u1234 \u1245\u122d\u1295\u132b\u134d \u1262\u122e \u12cd\u1235\u1325 \u1290\u12cd\u1362\u1208\u1270\u1328\u121b\u122a \u1218\u1228\u1303 \u1260\u1235\u120d\u12ad \u1241\u1325\u122d 011-515-11-53 \u12a5\u1293 011-515-07-11 \u12a0",
         "listing_type": "auction"
       }
     },
@@ -331,9 +319,9 @@
     {
       "name": "Walia Tender",
       "url": "https://www.waliatender.com",
-      "status": "error",
-      "status_code": 403,
-      "error": "HTTP 403"
+      "status": "accessible",
+      "status_code": 200,
+      "error": null
     },
     {
       "name": "AddisList",
@@ -359,7 +347,7 @@
   "working_scrapers": [
     {
       "name": "Abyssinia Bank",
-      "listings": 2,
+      "listings": 8,
       "has_price": false,
       "has_location": true
     },
@@ -381,7 +369,7 @@
     },
     {
       "name": "Dashen Bank",
-      "reason": "No listings found"
+      "reason": "Import error: No module named 'scrapers.banks.dashen_scraper'"
     },
     {
       "name": "Zemen Bank",

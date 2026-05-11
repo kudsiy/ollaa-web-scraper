@@ -13,5 +13,5 @@ class CBEScraper(KeywordBankScraper):
         super().__init__(
             source_name="Commercial Bank of Ethiopia",
             base_url="https://www.combanketh.et",
-            auction_paths=["/notice", "/ማስታወቂያ"]
+            auction_paths=["/en/announcements/", "/am/announcements/", "/notice"]
         )

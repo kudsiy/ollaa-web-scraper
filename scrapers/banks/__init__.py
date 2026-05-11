@@ -6,7 +6,6 @@ from scrapers.banks.berhan_scraper import BerhanBankScraper
 from scrapers.banks.amhara_scraper import AmharaBankScraper
 from scrapers.banks.cbe_scraper import CBEScraper
 from scrapers.banks.awash_scraper import AwashBankScraper
-from scrapers.banks.dashen_scraper import DashenBankScraper
 from scrapers.banks.zemen_scraper import ZemenBankScraper
 from scrapers.banks.coop_scraper import CoopBankScraper
 
@@ -17,7 +16,6 @@ __all__ = [
     "AmharaBankScraper",
     "CBEScraper",
     "AwashBankScraper",
-    "DashenBankScraper",
     "ZemenBankScraper",
     "CoopBankScraper"
 ]

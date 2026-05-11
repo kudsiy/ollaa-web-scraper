@@ -24,7 +24,7 @@ from source_registry import SOURCE_REGISTRY, iter_sources
 from scrapers.banks import (
     AddisListScraper, AbyssiniaBankScraper, BerhanBankScraper, 
     AmharaBankScraper, CBEScraper, AwashBankScraper, 
-    DashenBankScraper, ZemenBankScraper, CoopBankScraper
+    ZemenBankScraper, CoopBankScraper
 )
 from scrapers.tenders.waliatender_scraper import WaliaTenderScraper
 from scrapers.listings.engocha_scraper import EngochaScraper
@@ -66,7 +66,6 @@ class ScraperScheduler:
             "amhara": AmharaBankScraper(),
             "cbe": CBEScraper(),
             "awash": AwashBankScraper(),
-            "dashen": DashenBankScraper(),
             "zemen": ZemenBankScraper(),
             "coop": CoopBankScraper(),
             "waliatender": WaliaTenderScraper(),
@@ -182,7 +181,7 @@ class ScraperScheduler:
         # If no scrapers found by category, try the hardcoded mapping for backward compatibility
         if not scraper_names:
             scraper_mapping = {
-                "banks": ["addislist", "abyssinia", "berhan", "amhara", "cbe", "awash", "dashen", "zemen", "coop"],
+                "banks": ["addislist", "abyssinia", "berhan", "amhara", "cbe", "awash", "zemen", "coop"],
                 "tenders": ["waliatender"],
                 "listings": ["engocha"],
             }

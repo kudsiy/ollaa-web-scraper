@@ -13,5 +13,5 @@ class AwashBankScraper(KeywordBankScraper):
         super().__init__(
             source_name="Awash Bank",
             base_url="https://awashbank.com",
-            auction_paths=["/notice", "/ማስታወቂያ"]
+            auction_paths=["/category/notices/", "/notice"]
         )
