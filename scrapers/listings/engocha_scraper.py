@@ -64,16 +64,11 @@ class EngochaScraper(BaseScraper):
         """Find listing pages from Engocha website."""
         pages = []
         
+        # Known working property listing URLs on Engocha
         possible_urls = [
-            f"{self.base_url}/properties",
-            f"{self.base_url}/listings",
             f"{self.base_url}/real-estate",
-            f"{self.base_url}/houses",
-            f"{self.base_url}/apartments",
-            f"{self.base_url}/lands",
-            f"{self.base_url}/for-sale",
-            f"{self.base_url}/for-rent",
-            f"{self.base_url}/default/properties.aspx",
+            f"{self.base_url}/apartments-houses-for-sale",
+            f"{self.base_url}/apartments-houses-for-rent",
         ]
         
         for url in possible_urls:
@@ -95,8 +90,8 @@ class EngochaScraper(BaseScraper):
             return listings
             
         listing_cards = soup.select(
-            '.listing-card, .property-card, .listing-item, .property-item, '
-            '[class*="listing"], [class*="property"], article, .item, .col-md-4, .col-sm-6'
+            '.listing, .listing-card, .property-card, .listing-item, .property-item, '
+            '[class*="listing"], [class*="property"], article, .item'
         )
         
         for card in listing_cards:
