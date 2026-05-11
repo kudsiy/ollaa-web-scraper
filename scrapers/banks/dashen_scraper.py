@@ -13,5 +13,5 @@ class DashenBankScraper(KeywordBankScraper):
         super().__init__(
             source_name="Dashen Bank",
             base_url="https://dashenbanksc.com",
-            auction_paths=["/notice", "/ማስታወቂያ"]
+            auction_paths=["/bids-tenders"]
         )
