@@ -41,6 +41,62 @@ SOURCE_REGISTRY = {
         "scrapability": "blocked",
         "status": "blocked",  # Returns 403 Forbidden
     },
+    "twomerkato": {
+        "name": "2Merkato Tenders",
+        "url": "https://www.2merkato.com/tenders/land-lease-real-estate",
+        "category": "auction_aggregators",
+        "valuation_signal": "liquidation_value",
+        "scrapability": "medium",
+    },
+    "ethiopiantender": {
+        "name": "Ethiopian Tender",
+        "url": "https://www.ethiopiantender.com",
+        "category": "auction_aggregators",
+        "valuation_signal": "liquidation_value",
+        "scrapability": "medium",
+    },
+    "afrotender": {
+        "name": "Afro Tender",
+        "url": "https://afrotender.com",
+        "category": "auction_aggregators",
+        "valuation_signal": "liquidation_value",
+        "scrapability": "medium",
+    },
+    "reportertenders": {
+        "name": "Reporter Tenders",
+        "url": "https://www.ethiopianreportertenders.com",
+        "category": "auction_aggregators",
+        "valuation_signal": "liquidation_value",
+        "scrapability": "medium",
+    },
+    "auctionethiopia": {
+        "name": "Auction Ethiopia",
+        "url": "https://auction.et",
+        "category": "auction_aggregators",
+        "valuation_signal": "liquidation_value",
+        "scrapability": "medium",
+    },
+    "egp": {
+        "name": "eGP Ethiopia",
+        "url": "https://egp.ppa.gov.et/egp/bids/published",
+        "category": "institutional_auctions",
+        "valuation_signal": "primary_auction",
+        "scrapability": "medium",
+    },
+    "tendersontime": {
+        "name": "TendersOnTime",
+        "url": "https://www.tendersontime.com/ethiopia-tenders/",
+        "category": "auction_aggregators",
+        "valuation_signal": "liquidation_value",
+        "scrapability": "low",
+    },
+    "globaltenders": {
+        "name": "Global Tenders",
+        "url": "https://www.globaltenders.com/ethiopia-tenders.php",
+        "category": "auction_aggregators",
+        "valuation_signal": "liquidation_value",
+        "scrapability": "low",
+    },
 
     # 3. Banking & Institutional Auction Sources
     "abyssinia": {

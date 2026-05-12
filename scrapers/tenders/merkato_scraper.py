@@ -1,134 +1,54 @@
 """
-Base tender scraper.
-Provides common functionality for tender scrapers.
+2Merkato Tenders scraper.
 """
 import logging
-import asyncio
-import re
-from datetime import datetime
-from typing import List, Optional
-
-from bs4 import BeautifulSoup
-from scrapers.base_scraper import PlaywrightScraper, ScrapedListing, ScrapeResult
-from parsers.price_extractor import PriceExtractor
+from typing import Optional
+from scrapers.base_scraper import ScrapedListing
+from scrapers.tenders.base_tender_scraper import BaseTenderScraper
 
 logger = logging.getLogger(__name__)
 
 
-class BaseTenderScraper(PlaywrightScraper):
+class MerkatoScraper(BaseTenderScraper):
     """
-    Base scraper for tender notices.
-    Uses Playwright for JS-rendered content.
+    Scraper for 2Merkato Tender notices.
+    Specifically targets Land Lease and Real Estate.
     """
     
-    base_url = "https://example.com"
-    source_name = "Tender"
-    
-    def __init__(self):
-        super().__init__()
-        self.price_extractor = PriceExtractor()
-        
-    async def scrape_async(self) -> ScrapeResult:
-        """
-        Main scraping method for tender notices.
-        """
-        start_time = datetime.utcnow()
-        result = ScrapeResult(success=False)
-        
-        try:
-            await self._init_browser()
-            
-            page = await self.context.new_page()
-            
-            try:
-                await page.goto(self.base_url, wait_until="networkidle", timeout=60000)
-            except Exception as e:
-                self.logger.warning(f"Navigation timeout, trying load event: {e}")
-                try:
-                    await page.goto(self.base_url, wait_until="load", timeout=60000)
-                except Exception as e2:
-                    self.logger.error(f"Failed to load page: {e2}")
-                    result.errors.append(f"Navigation failed: {e2}")
-                    await page.close()
-                    await self._close_browser()
-                    result.duration_seconds = (datetime.utcnow() - start_time).total_seconds()
-                    return result
-            
-            await asyncio.sleep(2)
-            
-            content = await page.content()
-            soup = BeautifulSoup(content, "html.parser")
-            
-            tender_items = soup.select(".tender-item, .tender-card, .list-group-item, article, .post, .entry")
-            self.logger.info(f"Found {len(tender_items)} potential tender items on {self.source_name}")
-            
-            for item in tender_items:
-                listing = self._parse_tender_item(item)
-                if listing:
-                    result.listings.append(listing)
-                    
-            result.success = True
-            result.scraped_count = len(result.listings)
-            await page.close()
-            
-        except Exception as e:
-            self.logger.error(f"Error during {self.source_name} scrape: {e}")
-            result.errors.append(str(e))
-        finally:
-            await self._close_browser()
-            
-        result.duration_seconds = (datetime.utcnow() - start_time).total_seconds()
-        return result
+    base_url = "https://tender.2merkato.com/tenders"
+    source_name = "2Merkato"
+    item_selector = "div.bg-white.rounded-lg.p-4"
 
-    def scrape(self) -> ScrapeResult:
-        """Synchronous wrapper for scrape_async."""
-        return asyncio.run(self.scrape_async())
-        
     def _parse_tender_item(self, item) -> Optional[ScrapedListing]:
-        """Parse a tender item."""
+        """Custom parsing for 2Merkato."""
         try:
-            title_elem = item.select_one("h3, h4, h2, .title, .tender-title, a")
+            # Selector for 2Merkato titles
+            title_elem = item.select_one("a.hover\\:text-blue-600.hover\\:underline")
             if not title_elem:
                 return None
                 
             title = title_elem.get_text(strip=True)
-            
             if not title or len(title) < 5:
                 return None
             
-            desc_elem = item.select_one(".description, .tender-details, p, .content")
-            location_elem = item.select_one(".location, .region, .address")
-            date_elem = item.select_one(".date, .deadline, .closing-date, time")
-            price_elem = item.select_one(".price, .amount, .cost")
+            # The link is the title itself
+            link = self._get_absolute_url(title_elem.get("href"))
             
-            description = desc_elem.get_text(strip=True) if desc_elem else ""
-            location = location_elem.get_text(strip=True) if location_elem else None
-            price_text = price_elem.get_text(strip=True) if price_elem else ""
-            
-            if price_text:
-                price = self.price_extractor.extract(price_text)
-            else:
-                price = self.price_extractor.extract(description)
-                
-            link_elem = item.select_one("a[href]")
-            link = self.base_url
-            if link_elem:
-                href = link_elem.get("href")
-                if href:
-                    if href.startswith('http'):
-                        link = href
-                    else:
-                        link = self._get_absolute_url(href)
+            # Metadata is usually in divs below the title
+            metadata_divs = item.select("div.mt-2.text-sm.text-gray-600 div")
+            description = ""
+            for div in metadata_divs:
+                description += div.get_text(strip=True) + " | "
                 
             return self.create_listing(
                 title=title,
-                description=description,
-                price=price,
-                location=location,
+                description=description.strip(" | "),
+                price=None, # Usually not visible without subscription
+                location=None,
                 source_url=link,
                 listing_type="tender",
-                raw_data={"raw_html": str(item)[:1000]}
+                raw_data={"raw_html": str(item)[:500]}
             )
         except Exception as e:
-            self.logger.debug(f"Error parsing tender item: {e}")
+            self.logger.debug(f"Error parsing 2Merkato item: {e}")
             return None

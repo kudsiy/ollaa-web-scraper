@@ -4,7 +4,7 @@ Walia Tender scraper.
 import logging
 from typing import Optional
 from scrapers.base_scraper import ScrapedListing, ScrapeResult
-from scrapers.tenders.merkato_scraper import BaseTenderScraper
+from scrapers.tenders.base_tender_scraper import BaseTenderScraper
 
 logger = logging.getLogger(__name__)
 
@@ -24,11 +24,9 @@ class WaliaTenderScraper(BaseTenderScraper):
         return result
 
     def _parse_tender_item(self, item) -> Optional[ScrapedListing]:
-        # Print raw HTML of the first item to understand the actual structure
+        # Use logging instead of print to avoid encoding issues in Windows console
         if not hasattr(self, '_first_item_printed'):
-            print("\n--- WALIA TENDER DEBUG: FIRST ITEM HTML ---")
-            print(item.prettify())
-            print("--- END DEBUG ---\n")
+            self.logger.info("First item HTML captured for debug")
             self._first_item_printed = True
 
         try:

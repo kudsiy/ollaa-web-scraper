@@ -224,7 +224,8 @@ class PlaywrightScraper(BaseScraper):
         self.playwright = await async_playwright().start()
         self.browser = await self.playwright.chromium.launch(headless=True)
         self.context = await self.browser.new_context(
-            user_agent=self.config.scraper.user_agent
+            user_agent=self.config.scraper.user_agent,
+            ignore_https_errors=True
         )
     
     async def _close_browser(self):

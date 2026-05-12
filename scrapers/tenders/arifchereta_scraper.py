@@ -2,7 +2,7 @@
 Arif Chereta scraper.
 """
 import logging
-from scrapers.tenders.merkato_scraper import BaseTenderScraper
+from scrapers.tenders.base_tender_scraper import BaseTenderScraper
 
 logger = logging.getLogger(__name__)
 

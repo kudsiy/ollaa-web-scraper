@@ -27,6 +27,14 @@ from scrapers.banks import (
     DashenBankScraper, ZemenBankScraper, CoopBankScraper
 )
 from scrapers.tenders.waliatender_scraper import WaliaTenderScraper
+from scrapers.tenders.merkato_scraper import MerkatoScraper
+from scrapers.tenders.ethiopiantender_scraper import EthiopianTenderScraper
+from scrapers.tenders.afrotender_scraper import AfroTenderScraper
+from scrapers.tenders.reportertenders_scraper import ReporterTendersScraper
+from scrapers.tenders.auctionethiopia_scraper import AuctionEthiopiaScraper
+from scrapers.tenders.egp_scraper import EGPScraper
+from scrapers.tenders.tendersontime_scraper import TendersOnTimeScraper
+from scrapers.tenders.globaltenders_scraper import GlobalTendersScraper
 from scrapers.listings.engocha_scraper import EngochaScraper
 
 
@@ -70,6 +78,14 @@ class ScraperScheduler:
             "zemen": ZemenBankScraper(),
             "coop": CoopBankScraper(),
             "waliatender": WaliaTenderScraper(),
+            "twomerkato": MerkatoScraper(),
+            "ethiopiantender": EthiopianTenderScraper(),
+            "afrotender": AfroTenderScraper(),
+            "reportertenders": ReporterTendersScraper(),
+            "auctionethiopia": AuctionEthiopiaScraper(),
+            "egp": EGPScraper(),
+            "tendersontime": TendersOnTimeScraper(),
+            "globaltenders": GlobalTendersScraper(),
             "engocha": EngochaScraper(),
         }
 
