@@ -115,6 +115,7 @@ class Deduplicator:
         title = (listing.get("title", "") or "").lower().strip()
         location = (listing.get("location", "") or "").lower().strip()
         price = listing.get("price")
+        area = listing.get("area_sqm")
         
         for exist_listing in existing:
             if listing.get("source_name") != exist_listing.get("source_name"):
@@ -123,6 +124,7 @@ class Deduplicator:
             exist_title = (exist_listing.get("title", "") or "").lower().strip()
             exist_location = (exist_listing.get("location", "") or "").lower().strip()
             exist_price = exist_listing.get("price")
+            exist_area = exist_listing.get("area_sqm")
             
             title_similarity = self._string_similarity(title, exist_title)
             location_similarity = self._string_similarity(location, exist_location)
@@ -131,7 +133,11 @@ class Deduplicator:
             if price and exist_price:
                 price_match = abs(price - exist_price) / max(price, exist_price) < 0.1
             
-            if title_similarity > threshold and location_similarity > threshold and price_match:
+            area_match = True
+            if area and exist_area:
+                area_match = abs(area - exist_area) / max(area, exist_area) < 0.05
+
+            if title_similarity > threshold and location_similarity > threshold and price_match and area_match:
                 return True
                 
         return False
@@ -204,20 +210,19 @@ class Deduplicator:
     
     def generate_hash(self, listing: Dict[str, Any]) -> str:
         """
-        Generate content hash for a listing.
-        
-        Args:
-            listing: Listing dictionary
-            
-        Returns:
-            SHA256 hash string
+        Generate content hash for a listing using multiple fields.
+        Ensures uniqueness across the 57-column schema.
         """
         content = (
             f"{listing.get('source_name', '')}|"
             f"{listing.get('title', '')}|"
             f"{listing.get('price', '')}|"
             f"{listing.get('location', '')}|"
-            f"{listing.get('property_type', '')}"
+            f"{listing.get('property_type', '')}|"
+            f"{listing.get('area_sqm', '')}|"
+            f"{listing.get('bedrooms', '')}|"
+            f"{listing.get('floor_level', '')}|"
+            f"{listing.get('developer', '')}"
         )
         
         return hashlib.sha256(content.encode()).hexdigest()

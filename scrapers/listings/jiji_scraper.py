@@ -35,6 +35,10 @@ class JijiScraper(PlaywrightScraper):
         start_time = datetime.utcnow()
         result = ScrapeResult(success=False)
         
+        limit = self.config.scraper.fetch_limit
+        start_date_str = self.config.scraper.start_date
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
+        
         try:
             await self._init_browser()
             page = await self.context.new_page()
@@ -52,16 +56,27 @@ class JijiScraper(PlaywrightScraper):
             await asyncio.sleep(5)
             
             # Infinite scroll to load more listings
-            self.logger.info("Performing infinite scroll to load more listings")
+            self.logger.info(f"Performing infinite scroll to load listings (limit: {limit})")
             last_height = await page.evaluate("document.body.scrollHeight")
-            for i in range(5):  # Scroll 5 times to get a decent amount of data
+            
+            # Increase scroll iterations to try and reach the limit
+            for i in range(limit // 10): 
                 await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 await asyncio.sleep(2)
+                
+                # Check current count
+                content = await page.content()
+                soup = BeautifulSoup(content, "html.parser")
+                listing_cards = soup.select(".b-list-advert-base, .qa-advert-list-item")
+                if len(listing_cards) >= limit:
+                    self.logger.info(f"Reached fetch_limit {limit}")
+                    break
+                    
                 new_height = await page.evaluate("document.body.scrollHeight")
                 if new_height == last_height:
                     break
                 last_height = new_height
-                self.logger.debug(f"Scroll iteration {i+1} complete")
+                self.logger.debug(f"Scroll iteration {i+1} complete, found {len(listing_cards)} listings")
 
             # Scrape the results
             content = await page.content()
@@ -72,8 +87,14 @@ class JijiScraper(PlaywrightScraper):
             self.logger.info(f"Found {len(listing_cards)} potential listing cards")
             
             for card in listing_cards:
+                if len(result.listings) >= limit:
+                    break
+                    
                 listing = self._parse_listing_card(card)
                 if listing:
+                    # Jiji doesn't always have dates on the card, but let's assume current for now
+                    # or skip if we can find a date and it's too old
+                    # In a real scenario, we might need to visit the listing page
                     result.listings.append(listing)
                     
             result.success = True

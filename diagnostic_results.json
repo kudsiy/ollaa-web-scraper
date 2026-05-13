@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-05-13T20:03:48.616028+00:00",
+  "timestamp": "2026-05-13T20:44:49.400004+00:00",
   "import_tests": [
     {
       "module": "requests",
@@ -299,9 +299,9 @@
     {
       "name": "Zemen Bank",
       "url": "https://www.zemenbank.com",
-      "status": "error",
-      "status_code": 503,
-      "error": "HTTP 503"
+      "status": "accessible",
+      "status_code": 200,
+      "error": null
     },
     {
       "name": "Bank of Abyssinia",

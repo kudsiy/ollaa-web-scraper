@@ -13,6 +13,7 @@ from typing import List, Dict, Any
 from source_registry import SOURCE_REGISTRY
 from etl.normalizer import Normalizer
 from etl.sheets_exporter import SheetsExporter
+from etl.deduplicator import Deduplicator
 
 # Import all scrapers
 from scrapers.banks import (
@@ -47,6 +48,7 @@ async def run_exporter_async():
     """Run all verified scrapers and export results to JSON and CSV."""
     normalizer = Normalizer()
     sheets_exporter = SheetsExporter()
+    deduplicator = Deduplicator()
     
     # Map source keys to scraper instances
     scraper_instances = {
@@ -121,20 +123,25 @@ async def run_exporter_async():
         except Exception as e:
             logger.exception(f"Unexpected error running scraper {source_key}: {e}")
 
+    # Deduplication
+    logger.info(f"Performing deduplication on {len(all_normalized_listings)} listings")
+    unique_listings, duplicate_count = deduplicator.deduplicate(all_normalized_listings)
+    logger.info(f"Deduplication complete. Removed {duplicate_count} duplicates. {len(unique_listings)} remaining.")
+
     # Final Export to JSON
     json_output_file = "property_data.json"
     try:
         with open(json_output_file, "w", encoding="utf-8") as f:
-            json.dump(all_normalized_listings, f, ensure_ascii=False, indent=2, default=str)
-        logger.info(f"Successfully exported {len(all_normalized_listings)} listings to {json_output_file}")
+            json.dump(unique_listings, f, ensure_ascii=False, indent=2, default=str)
+        logger.info(f"Successfully exported {len(unique_listings)} listings to {json_output_file}")
     except Exception as e:
         logger.error(f"Failed to write JSON output file: {e}")
 
     # Final Export to CSV (Google Sheets schema)
     csv_output_file = "property_data_unified.csv"
     try:
-        sheets_exporter.export_to_csv(all_normalized_listings, csv_output_file)
-        logger.info(f"Successfully exported {len(all_normalized_listings)} listings to {csv_output_file}")
+        sheets_exporter.export_to_csv(unique_listings, csv_output_file)
+        logger.info(f"Successfully exported {len(unique_listings)} listings to {csv_output_file}")
     except Exception as e:
         logger.error(f"Failed to write CSV output file: {e}")
 

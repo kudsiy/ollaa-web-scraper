@@ -35,6 +35,8 @@ class CBEScraper(PlaywrightScraper):
         start_time = datetime.utcnow()
         result = ScrapeResult(success=False)
         
+        limit = self.config.scraper.fetch_limit
+        
         try:
             await self._init_browser()
             page = await self.context.new_page()
@@ -48,6 +50,9 @@ class CBEScraper(PlaywrightScraper):
             ]
             
             for path in auction_paths:
+                if len(result.listings) >= limit:
+                    break
+                    
                 url = self._get_absolute_url(path)
                 self.logger.info(f"Navigating to CBE Notices: {url}")
                 
@@ -63,6 +68,8 @@ class CBEScraper(PlaywrightScraper):
                     found_count = 0
                     
                     for item in items:
+                        if len(result.listings) >= limit:
+                            break
                         text = item.get_text(separator=" ", strip=True)
                         # Keywords for property auctions
                         if any(kw in text for kw in ["ሐራጅ", "የሐራጅ", "ጨረታ", "Auction", "Foreclosure", "Tender"]):
@@ -74,6 +81,8 @@ class CBEScraper(PlaywrightScraper):
                     # Also look for PDF links specifically
                     pdf_links = soup.find_all("a", href=re.compile(r"\.pdf$", re.IGNORECASE))
                     for link in pdf_links:
+                        if len(result.listings) >= limit:
+                            break
                         link_text = link.get_text(strip=True)
                         href = link.get("href")
                         if any(kw in link_text for kw in ["ሐራጅ", "ጨረታ", "Auction", "Notice", "Tender"]):

@@ -64,10 +64,18 @@ class Normalizer:
             "property_type": semantic_results.get("property_type") or self._normalize_property_type(listing.property_type),
             "property_subtype": semantic_results.get("property_subtype"),
             "location": semantic_results.get("refined_location") or self._normalize_location(listing.location),
+            "refined_location": semantic_results.get("refined_location"),
+            "region": semantic_results.get("region"),
+            "city": semantic_results.get("city"),
+            "subcity": semantic_results.get("subcity"),
             "area_sqm": semantic_results.get("area_sqm") or self._normalize_area(listing.area_sqm),
             "area_type": semantic_results.get("area_type"),
-            "bedrooms": self._normalize_integer(listing.bedrooms),
-            "bathrooms": self._normalize_integer(listing.bathrooms),
+            "bedrooms": semantic_results.get("bedrooms") or self._normalize_integer(listing.bedrooms),
+            "bathrooms": semantic_results.get("bathrooms") or self._normalize_integer(listing.bathrooms),
+            "kitchens": semantic_results.get("kitchens"),
+            "parking_spaces": semantic_results.get("parking_spaces"),
+            "water_supply": semantic_results.get("water_supply"),
+            "electricity": semantic_results.get("electricity"),
             "images": self._normalize_images(listing.images),
             "posted_date": self._normalize_date(listing.posted_date),
             "closing_date": self._normalize_date(listing.closing_date),
@@ -77,6 +85,7 @@ class Normalizer:
             "finish_state": semantic_results.get("finish_state"),
             "contacts": semantic_results.get("contacts"),
             "floor_level": semantic_results.get("floor_level"),
+            "total_floors": semantic_results.get("total_floors"),
             "valuation_eligible": semantic_results.get("valuation_eligible", False),
             "content_hash": self._generate_hash(listing),
             "scraped_at": datetime.utcnow(),
@@ -303,7 +312,7 @@ class Normalizer:
         return "sale"
     
     def _generate_hash(self, listing) -> str:
-        """Generate content hash for deduplication."""
+        """Generate content hash for deduplication using multiple fields."""
         import hashlib
         
         content = (
@@ -311,7 +320,9 @@ class Normalizer:
             f"{listing.title or ''}|"
             f"{listing.price or ''}|"
             f"{listing.location or ''}|"
-            f"{listing.property_type or ''}"
+            f"{listing.property_type or ''}|"
+            f"{listing.area_sqm or ''}|"
+            f"{listing.bedrooms or ''}"
         )
         
         return hashlib.sha256(content.encode()).hexdigest()
