@@ -40,6 +40,8 @@ from scrapers.listings import (
     EthiopiaRealtyScraper, EthioRealEstatesScraper, LivingEthioScraper,
     RealEthioScraper
 )
+from scrapers.telegram_scraper import TelegramScraper
+from etl.sheets_exporter import SheetsExporter
 
 
 logger = logging.getLogger(__name__)
@@ -55,6 +57,7 @@ class ScraperScheduler:
         self.config = config or get_config()
         self.normalizer = Normalizer()
         self.db_writer = DBWriter()
+        self.sheets_exporter = SheetsExporter()
         
         # Initialize deduplicator with a live connection if possible
         try:
@@ -97,6 +100,8 @@ class ScraperScheduler:
             "ethiorealestates": EthioRealEstatesScraper(),
             "livingethio": LivingEthioScraper(),
             "realethio": RealEthioScraper(),
+            "telegram_ethio_real_estate": TelegramScraper("telegram_ethio_real_estate"),
+            "telegram_betoch": TelegramScraper("telegram_betoch"),
         }
 
 
@@ -181,6 +186,10 @@ class ScraperScheduler:
             self._run_scraper_group, "listings"
         )
         
+        schedule.every(30).minutes.do(
+            self._run_scraper_group, "telegram"
+        )
+        
         schedule.every(24).hours.do(self._cleanup_old_data)
         
         logger.info("Scheduled jobs registered")
@@ -195,7 +204,8 @@ class ScraperScheduler:
         category_map = {
             "banks": ["institutional_auctions", "auction_aggregators"],
             "tenders": ["auction_aggregators"],
-            "listings": ["market_listings", "specialized_platforms"]
+            "listings": ["market_listings", "specialized_platforms"],
+            "telegram": ["telegram_channels"]
         }
         
         categories = category_map.get(group, [group])
@@ -263,6 +273,8 @@ class ScraperScheduler:
             normalized_listings = []
             for i, listing in enumerate(result.listings):
                 try:
+                    if not listing.source_key:
+                        listing.source_key = scraper_name
                     normalized = self.normalizer.normalize_listing(listing)
                     is_valid, errors = self.normalizer.validate_normalized(normalized)
                     
@@ -285,6 +297,11 @@ class ScraperScheduler:
             
             insert_stats = self.db_writer.insert_batch(unique_listings)
             logger.info(f"Insert stats: {insert_stats}")
+            
+            # Export to unified Google Sheets format (CSV)
+            if unique_listings:
+                export_filename = f"exports/unified_listings_{datetime.utcnow().strftime('%Y%m%d')}.csv"
+                self.sheets_exporter.export_to_csv(unique_listings, export_filename)
             
             self._update_stats(
                 scrape_count=1,

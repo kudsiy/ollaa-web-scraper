@@ -1,27 +1,30 @@
-
 """
-Unified JSON exporter for Ollaa Web Scraper.
-Runs all verified scrapers and exports processed data to property_data.json.
+Unified exporter for Ollaa Web Scraper.
+Runs all verified scrapers and exports processed data to property_data.json 
+and property_data_unified.csv (57-column Google Sheets schema).
 """
 import json
 import logging
 import asyncio
+import os
 from datetime import datetime
 from typing import List, Dict, Any
 
 from source_registry import SOURCE_REGISTRY
-from parsers.semantic_engine import SemanticProcessingEngine
+from etl.normalizer import Normalizer
+from etl.sheets_exporter import SheetsExporter
 
 # Import all scrapers
 from scrapers.banks import (
     AddisListScraper, AbyssiniaBankScraper, BerhanBankScraper, 
     AmharaBankScraper, CBEScraper, AwashBankScraper, 
-    ZemenBankScraper, CoopBankScraper
+    DashenBankScraper, ZemenBankScraper, CoopBankScraper
 )
 from scrapers.tenders.waliatender_scraper import WaliaTenderScraper
 from scrapers.tenders.merkato_scraper import MerkatoScraper
 from scrapers.tenders.ethiopiantender_scraper import EthiopianTenderScraper
 from scrapers.tenders.afrotender_scraper import AfroTenderScraper
+from scrapers.tenders.reportertenders_scraper import ReporterTendersScraper
 from scrapers.tenders.auctionethiopia_scraper import AuctionEthiopiaScraper
 from scrapers.tenders.egp_scraper import EGPScraper
 from scrapers.tenders.tendersontime_scraper import TendersOnTimeScraper
@@ -32,16 +35,18 @@ from scrapers.listings import (
     EthiopiaRealtyScraper, EthioRealEstatesScraper, LivingEthioScraper,
     RealEthioScraper, JijiScraper
 )
+from scrapers.telegram_scraper import TelegramScraper
 
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-logger = logging.getLogger("json_exporter")
+logger = logging.getLogger("unified_exporter")
 
 async def run_exporter_async():
-    """Run all verified scrapers and export results to JSON."""
-    semantic_engine = SemanticProcessingEngine()
+    """Run all verified scrapers and export results to JSON and CSV."""
+    normalizer = Normalizer()
+    sheets_exporter = SheetsExporter()
     
     # Map source keys to scraper instances
     scraper_instances = {
@@ -51,12 +56,14 @@ async def run_exporter_async():
         "amhara": AmharaBankScraper(),
         "cbe": CBEScraper(),
         "awash": AwashBankScraper(),
+        "dashen": DashenBankScraper(),
         "zemen": ZemenBankScraper(),
         "coop": CoopBankScraper(),
         "waliatender": WaliaTenderScraper(),
         "twomerkato": MerkatoScraper(),
         "ethiopiantender": EthiopianTenderScraper(),
         "afrotender": AfroTenderScraper(),
+        "reportertenders": ReporterTendersScraper(),
         "auctionethiopia": AuctionEthiopiaScraper(),
         "egp": EGPScraper(),
         "tendersontime": TendersOnTimeScraper(),
@@ -69,9 +76,11 @@ async def run_exporter_async():
         "livingethio": LivingEthioScraper(),
         "realethio": RealEthioScraper(),
         "jiji": JijiScraper(),
+        "telegram_ethio_real_estate": TelegramScraper("telegram_ethio_real_estate"),
+        "telegram_betoch": TelegramScraper("telegram_betoch"),
     }
     
-    all_processed_listings = []
+    all_normalized_listings = []
     
     # Filter to only working sources as defined in source_registry
     verified_sources = [k for k, v in SOURCE_REGISTRY.items() if v.get("status") in ["verified_working", "requires_js"]]
@@ -98,39 +107,36 @@ async def run_exporter_async():
             if result.success:
                 logger.info(f"Successfully scraped {len(result.listings)} listings from {source_key}")
                 for listing in result.listings:
-                    # Convert listing to flat dict for processing
-                    listing_dict = {
-                        "source_url": listing.source_url,
-                        "source_name": listing.source_name,
-                        "title": listing.title,
-                        "description": listing.description,
-                        "price": listing.price,
-                        "location": listing.location,
-                        "listing_type": listing.listing_type,
-                        "scraped_at": listing.scraped_at.isoformat() if listing.scraped_at else datetime.utcnow().isoformat()
-                    }
+                    # Inject source_key into listing for normalizer to pick up
+                    listing.source_key = source_key
                     
-                    # Apply Semantic Processing Engine
-                    processed = semantic_engine.process(listing_dict)
+                    # Normalize listing
+                    normalized = normalizer.normalize_listing(listing)
+                    normalized["source_key"] = source_key
                     
-                    # Add original source key for reference
-                    processed["source_key"] = source_key
-                    
-                    all_processed_listings.append(processed)
+                    all_normalized_listings.append(normalized)
             else:
                 logger.error(f"Scraper {source_key} failed: {result.errors}")
                 
         except Exception as e:
             logger.exception(f"Unexpected error running scraper {source_key}: {e}")
 
-    # Final Export
-    output_file = "property_data.json"
+    # Final Export to JSON
+    json_output_file = "property_data.json"
     try:
-        with open(output_file, "w", encoding="utf-8") as f:
-            json.dump(all_processed_listings, f, ensure_ascii=False, indent=2)
-        logger.info(f"Successfully exported {len(all_processed_listings)} listings to {output_file}")
+        with open(json_output_file, "w", encoding="utf-8") as f:
+            json.dump(all_normalized_listings, f, ensure_ascii=False, indent=2, default=str)
+        logger.info(f"Successfully exported {len(all_normalized_listings)} listings to {json_output_file}")
     except Exception as e:
-        logger.error(f"Failed to write output file: {e}")
+        logger.error(f"Failed to write JSON output file: {e}")
+
+    # Final Export to CSV (Google Sheets schema)
+    csv_output_file = "property_data_unified.csv"
+    try:
+        sheets_exporter.export_to_csv(all_normalized_listings, csv_output_file)
+        logger.info(f"Successfully exported {len(all_normalized_listings)} listings to {csv_output_file}")
+    except Exception as e:
+        logger.error(f"Failed to write CSV output file: {e}")
 
 if __name__ == "__main__":
     asyncio.run(run_exporter_async())

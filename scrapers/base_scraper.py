@@ -27,6 +27,7 @@ class ScrapedListing:
     source_url: str
     source_name: str
     title: str
+    source_key: Optional[str] = None
     description: str = ""
     price: Optional[float] = None
     price_currency: str = "ETB"
