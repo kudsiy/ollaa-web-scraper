@@ -13,6 +13,11 @@ These platforms are the primary sources for current market asking prices and pro
 | **Ethiopia Property Centre** | https://ethiopiapropertycentre.com | High | High (Aggregated listings) |
 | **Ethiopia Realty** | https://ethiopiarealty.com | High | Medium (High-end properties) |
 | **Real Ethio** | https://realethio.com | Medium | Medium (General listings) |
+| **ET Realtor** | https://etrealtor.com.et | High | Medium (Professional listings) |
+| **Ethiopian Properties** | https://ethiopianproperties.com | High | Medium (Large inventory) |
+| **Zegebeya** | https://zegebeya.com | Medium | Medium (Marketplace style) |
+| **AfroBet** | https://afrobet.com | Medium | Medium (Broker listings) |
+| **Jiji Ethiopia** | https://jiji.com.et | Very High | High (JS required, largest inventory) |
 
 ## 2. Tender & Auction Aggregators (Liquidation Value)
 Critical for understanding the lower bound of property values ("Forced Sale" values).

@@ -35,7 +35,11 @@ from scrapers.tenders.auctionethiopia_scraper import AuctionEthiopiaScraper
 from scrapers.tenders.egp_scraper import EGPScraper
 from scrapers.tenders.tendersontime_scraper import TendersOnTimeScraper
 from scrapers.tenders.globaltenders_scraper import GlobalTendersScraper
-from scrapers.listings.engocha_scraper import EngochaScraper
+from scrapers.listings import (
+    EngochaScraper, BetDelalaScraper, EthiopiaPropertyCentreScraper,
+    EthiopiaRealtyScraper, EthioRealEstatesScraper, LivingEthioScraper,
+    RealEthioScraper
+)
 
 
 logger = logging.getLogger(__name__)
@@ -87,6 +91,12 @@ class ScraperScheduler:
             "tendersontime": TendersOnTimeScraper(),
             "globaltenders": GlobalTendersScraper(),
             "engocha": EngochaScraper(),
+            "betdelala": BetDelalaScraper(),
+            "ethiopiapropertycentre": EthiopiaPropertyCentreScraper(),
+            "ethiopiarealty": EthiopiaRealtyScraper(),
+            "ethiorealestates": EthioRealEstatesScraper(),
+            "livingethio": LivingEthioScraper(),
+            "realethio": RealEthioScraper(),
         }
 
 

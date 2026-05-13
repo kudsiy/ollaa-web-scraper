@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-05-11T19:06:06.862680+00:00",
+  "timestamp": "2026-05-13T17:01:02.318041+00:00",
   "import_tests": [
     {
       "module": "requests",
@@ -166,7 +166,7 @@
       "has_price": false,
       "has_location": false,
       "sample_listing": {
-        "title": "\u133d/\u1264\u1275 2018 \u1260\u1300\u1275 \u12d3\u1218\u1275 \u12e8\u12a5\u1295\u1235\u1233\u1275 \u1218\u12f5\u1203\u1292\u1275 \u1260\u1328\u1228\u1273 \u12a0\u12c8\u12f3\u12f5\u122e \u1208\u1218\u130d\u12db\u1275 \u12ed\u1348\u120d\u130b\u120d\u1361\u1361FREE",
+        "title": "\u12f5\u122d\u1305\u1275 \u12a8\u12da\u1205 \u1260\u1273\u127d \u12e8\u1270\u12d8\u1228\u12d8\u1229\u1275\u1295 \u1260\u1260\u1300\u1275 \u12a0\u1218\u1271 \u12e8\u121a\u12eb\u1230\u122b\u1328\u12cd\u1295 \u12e8\u1270\u1208\u12eb\u12e9 \u12d3\u12ed\u1290\u1275 \u12e8\u12f0\u1295\u1265 \u12a0\u120d\u1263\u1233\u1275 \u130d\u12e5 \u1260\u130d\u120d\u133d \u1328\u1228\u1273 \u12a0\u12c8\u12f3\u12f5\u122e \u1208\u1218\u130d\u12db\u1275 \u12ed\u1348\u120d\u130b\u120d\u1361\u1361FREE",
         "price": null,
         "location": null,
         "listing_type": "tender"
@@ -175,9 +175,10 @@
     {
       "scraper": "Engocha",
       "class_path": "scrapers.listings.engocha_scraper.EngochaScraper",
-      "status": "success",
+      "status": "partial",
       "listings_found": 0,
       "errors": [
+        "The markup you provided was rejected by the parser. Trying a different parser or a different encoding may help.\n\nOriginal exception(s) from parser:\n AssertionError: expected name token at '<![\u06d1\ufffd}\ufffd\\x1ef)\ufffda\ufffd}A]\\x0b\ufffd\ufffd\ufffd'",
         "No listings found"
       ],
       "has_price": false,
@@ -331,9 +332,9 @@
     {
       "name": "Walia Tender",
       "url": "https://www.waliatender.com",
-      "status": "error",
-      "status_code": 403,
-      "error": "HTTP 403"
+      "status": "accessible",
+      "status_code": 200,
+      "error": null
     },
     {
       "name": "AddisList",
@@ -397,10 +398,6 @@
     },
     {
       "name": "Coop Bank",
-      "reason": "No listings found"
-    },
-    {
-      "name": "Engocha",
       "reason": "No listings found"
     },
     {
