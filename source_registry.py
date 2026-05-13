@@ -22,6 +22,7 @@ SOURCE_REGISTRY = {
         "valuation_signal": "market_price",
         "scrapability": "high",
         "status": "requires_js",  # Requires Playwright for JS-rendered content
+        "valuation_worthy": True,
     },
     "engocha": {
         "name": "Engocha",
@@ -30,6 +31,106 @@ SOURCE_REGISTRY = {
         "valuation_signal": "market_price",
         "scrapability": "medium",
         "status": "verified_working",  # Has property listings at /real-estate
+        "valuation_worthy": True,
+    },
+    "realethio": {
+        "name": "Real Ethio",
+        "url": "https://realethio.com",
+        "category": "market_listings",
+        "valuation_signal": "market_price",
+        "scrapability": "medium",
+        "status": "unknown",
+        "valuation_worthy": True,
+    },
+    "betdelala": {
+        "name": "BetDelala",
+        "url": "https://betdelala.com",
+        "category": "market_listings",
+        "valuation_signal": "market_price",
+        "scrapability": "high",
+        "status": "unknown",
+        "valuation_worthy": True,
+    },
+    "ethiopiarealty": {
+        "name": "Ethiopia Realty",
+        "url": "https://ethiopiarealty.com",
+        "category": "market_listings",
+        "valuation_signal": "market_price",
+        "scrapability": "medium",
+        "status": "unknown",
+        "valuation_worthy": True,
+    },
+    "ethiopiapropertycentre": {
+        "name": "Ethiopia Property Centre",
+        "url": "https://ethiopiapropertycentre.com",
+        "category": "market_listings",
+        "valuation_signal": "market_price",
+        "scrapability": "high",
+        "status": "unknown",
+        "valuation_worthy": True,
+    },
+    "etrealtor": {
+        "name": "ET Realtor",
+        "url": "https://etrealtor.com.et",
+        "category": "market_listings",
+        "valuation_signal": "market_price",
+        "scrapability": "medium",
+        "status": "unknown",
+        "valuation_worthy": True,
+    },
+    "ethiorealestates": {
+        "name": "Ethio Real Estates",
+        "url": "https://www.ethiorealestates.com",
+        "category": "market_listings",
+        "valuation_signal": "market_price",
+        "scrapability": "medium",
+        "status": "unknown",
+        "valuation_worthy": True,
+    },
+    "ethiopianproperties": {
+        "name": "Ethiopian Properties",
+        "url": "https://ethiopianproperties.com",
+        "category": "market_listings",
+        "valuation_signal": "market_price",
+        "scrapability": "medium",
+        "status": "unknown",
+        "valuation_worthy": True,
+    },
+    "zegebeya": {
+        "name": "Zegebeya",
+        "url": "https://zegebeya.com",
+        "category": "market_listings",
+        "valuation_signal": "market_price",
+        "scrapability": "medium",
+        "status": "unknown",
+        "valuation_worthy": True,
+    },
+    "afrobet": {
+        "name": "AfroBet",
+        "url": "https://afrobet.com",
+        "category": "market_listings",
+        "valuation_signal": "market_price",
+        "scrapability": "medium",
+        "status": "unknown",
+        "valuation_worthy": True,
+    },
+    "livingethio": {
+        "name": "Living Ethio",
+        "url": "https://livingethio.com",
+        "category": "market_listings",
+        "valuation_signal": "market_price",
+        "scrapability": "medium",
+        "status": "unknown",
+        "valuation_worthy": True,
+    },
+    "jiji": {
+        "name": "Jiji Ethiopia",
+        "url": "https://jiji.com.et",
+        "category": "market_listings",
+        "valuation_signal": "market_price",
+        "scrapability": "high",
+        "status": "requires_js",
+        "valuation_worthy": True,
     },
 
     # 2. Tender & Auction Aggregators
@@ -166,6 +267,7 @@ SOURCE_REGISTRY = {
 }
 
 MARKET_PRICE_SOURCE_KEYS = [k for k, v in SOURCE_REGISTRY.items() if v["valuation_signal"] == "market_price"]
+VALUATION_WORTHY_SOURCE_KEYS = [k for k, v in SOURCE_REGISTRY.items() if v.get("valuation_worthy")]
 AUCTION_VALUE_SOURCE_KEYS = [k for k, v in SOURCE_REGISTRY.items() if v["valuation_signal"] in ["liquidation_value", "primary_auction"]]
 
 # Working scrapers (sources that have been verified to work)
