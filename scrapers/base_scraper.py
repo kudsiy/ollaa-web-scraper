@@ -122,7 +122,15 @@ class BaseScraper(ABC):
                     timeout=self.config.scraper.request_timeout
                 )
                 response.raise_for_status()
-                return BeautifulSoup(response.content, "html.parser")
+                
+                # Try to use lxml if available for better parsing
+                parser = "lxml"
+                try:
+                    import lxml
+                except ImportError:
+                    parser = "html.parser"
+                    
+                return BeautifulSoup(response.content, parser)
             except requests.RequestException as e:
                 self.logger.warning(f"Attempt {attempt + 1} failed for {url}: {e}")
                 if attempt < retries:

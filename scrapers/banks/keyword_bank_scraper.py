@@ -47,19 +47,42 @@ class KeywordBankScraper(BaseScraper):
         return result
     
     def _extract_listings_from_page(self, soup: BeautifulSoup, result: ScrapeResult, current_url: str):
-        """Extract listings from a page based on keywords."""
+        """Extract listings from a page based on keywords and PDF links."""
         # Common containers for bank notices
-        containers = soup.select('article, .post, .entry, tr, .tender-item, .auction-item, .card, .notice-item, li')
+        containers = soup.select('article, .post, .entry, tr, .tender-item, .auction-item, .card, .notice-item, li, div[class*="item"], div[class*="notice"]')
         
-        # Keywords: የሐራጅ (auction) or ሽያጭ (sale) or ቤት (house/property)
-        keywords = ["የሐራጅ", "ሽያጭ", "ቤት"]
+        # Keywords: የሐራጅ (auction) or ሽያጭ (sale) or ቤት (house/property) or ጨረታ (tender)
+        keywords = ["የሐራጅ", "ሽያጭ", "ቤት", "ጨረታ", "ሐራጅ", "foreclosure", "auction", "tender"]
         
+        found_count = 0
         for container in containers:
             text = container.get_text()
             if any(kw in text for kw in keywords):
                 listing = self._parse_keyword_element(container, current_url)
                 if listing:
                     result.listings.append(listing)
+                    found_count += 1
+        
+        # Also look for PDF links that might contain auction notices
+        pdf_links = soup.find_all('a', href=re.compile(r'\.pdf$', re.IGNORECASE))
+        for link in pdf_links:
+            link_text = link.get_text().lower()
+            if any(kw in link_text for kw in ["auction", "ሐራጅ", "ጨረታ", "notice", "tender", "sale"]):
+                pdf_url = self._get_absolute_url(link.get('href'))
+                self.logger.info(f"Found potential auction PDF: {pdf_url}")
+                result.listings.append(self.create_listing(
+                    title=f"Auction Notice: {link.get_text(strip=True)}",
+                    description=f"Auction notice found in PDF: {pdf_url}",
+                    source_url=pdf_url,
+                    listing_type="auction",
+                    raw_data={"pdf_url": pdf_url}
+                ))
+                found_count += 1
+        
+        if found_count == 0:
+            self.logger.info(f"No listings matching keywords found on {current_url}")
+        else:
+            self.logger.info(f"Found {found_count} potential listings on {current_url}")
 
     def _parse_keyword_element(self, element, current_url: str) -> Optional[ScrapedListing]:
         """Parse an element into a ScrapedListing."""

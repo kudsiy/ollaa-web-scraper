@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-05-13T17:01:02.318041+00:00",
+  "timestamp": "2026-05-13T17:35:48.002182+00:00",
   "import_tests": [
     {
       "module": "requests",
@@ -110,7 +110,7 @@
       "scraper": "Abyssinia Bank",
       "class_path": "scrapers.banks.abyssinia_scraper.AbyssiniaBankScraper",
       "status": "working",
-      "listings_found": 2,
+      "listings_found": 8,
       "errors": [],
       "has_price": false,
       "has_location": true,
@@ -175,15 +175,17 @@
     {
       "scraper": "Engocha",
       "class_path": "scrapers.listings.engocha_scraper.EngochaScraper",
-      "status": "partial",
-      "listings_found": 0,
-      "errors": [
-        "The markup you provided was rejected by the parser. Trying a different parser or a different encoding may help.\n\nOriginal exception(s) from parser:\n AssertionError: expected name token at '<![\u06d1\ufffd}\ufffd\\x1ef)\ufffda\ufffd}A]\\x0b\ufffd\ufffd\ufffd'",
-        "No listings found"
-      ],
-      "has_price": false,
+      "status": "working",
+      "listings_found": 136,
+      "errors": [],
+      "has_price": true,
       "has_location": false,
-      "sample_listing": null
+      "sample_listing": {
+        "title": "Relevance",
+        "price": null,
+        "location": null,
+        "listing_type": "sale"
+      }
     },
     {
       "scraper": "AddisList",
@@ -332,9 +334,9 @@
     {
       "name": "Walia Tender",
       "url": "https://www.waliatender.com",
-      "status": "accessible",
-      "status_code": 200,
-      "error": null
+      "status": "error",
+      "status_code": 403,
+      "error": "HTTP 403"
     },
     {
       "name": "AddisList",
@@ -360,7 +362,7 @@
   "working_scrapers": [
     {
       "name": "Abyssinia Bank",
-      "listings": 2,
+      "listings": 8,
       "has_price": false,
       "has_location": true
     },
@@ -368,6 +370,12 @@
       "name": "Walia Tender",
       "listings": 6,
       "has_price": false,
+      "has_location": false
+    },
+    {
+      "name": "Engocha",
+      "listings": 136,
+      "has_price": true,
       "has_location": false
     }
   ],
