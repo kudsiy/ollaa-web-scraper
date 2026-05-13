@@ -40,15 +40,22 @@ class EngochaScraper(BaseScraper):
         start_time = datetime.utcnow()
         result = ScrapeResult(success=False)
         
+        limit = self.config.scraper.fetch_limit
+        
         try:
-            self.logger.info("Starting Engocha listing scrape")
+            self.logger.info(f"Starting Engocha listing scrape (limit: {limit})")
             
             listing_urls = self._find_listing_pages()
             self.logger.info(f"Found {len(listing_urls)} listing pages")
             
             for url in listing_urls:
+                if len(result.listings) >= limit:
+                    break
                 listings = self._scrape_listing_page(url)
                 result.listings.extend(listings)
+                
+            if len(result.listings) > limit:
+                result.listings = result.listings[:limit]
                 
             result.success = True
             result.scraped_count = len(result.listings)

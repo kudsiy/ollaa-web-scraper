@@ -106,16 +106,22 @@ class SemanticProcessingEngine:
         # 7. Developer Recognition
         processed["developer"] = self._recognize_developer(normalized_text)
         
-        # 8. Location Map
-        processed["refined_location"] = self._map_location(normalized_text)
+        # 8. Location Map (Region, City, Subcity)
+        location_details = self._map_location_detailed(normalized_text)
+        processed.update(location_details)
         
         # 9. Contact Info
         processed["contacts"] = self._extract_contacts(normalized_text)
         
-        # 11. Floor Level
+        # 11. Floor Level and Total Floors
         processed["floor_level"] = self._extract_floor_level(normalized_text)
+        processed["total_floors"] = self._extract_total_floors(normalized_text)
         
-        # 12. Eligibility Logic
+        # 12. Rooms and Features
+        features = self._extract_features(normalized_text)
+        processed.update(features)
+        
+        # 13. Eligibility Logic
         processed["valuation_eligible"] = self._check_eligibility(processed)
         
         return processed
@@ -234,6 +240,47 @@ class SemanticProcessingEngine:
         if floor_match:
             return int(floor_match.group(1))
         return None
+
+    def _map_location_detailed(self, text: str) -> Dict[str, Any]:
+        result = {"refined_location": None, "region": "Addis Ababa", "city": "Addis Ababa", "subcity": None}
+        for zone, keywords in self.locations.items():
+            for kw in keywords:
+                if kw.lower() in text.lower():
+                    result["refined_location"] = zone
+                    result["subcity"] = zone
+                    if zone == "Sheger City":
+                        result["city"] = "Sheger"
+                    return result
+        return result
+
+    def _extract_total_floors(self, text: str) -> Optional[int]:
+        match = re.search(r'(?:total|ጠቅላላ)\s*(\d+)\s*(?:floors|ፎቅ)', text, re.I)
+        if match:
+            return int(match.group(1))
+        return None
+
+    def _extract_features(self, text: str) -> Dict[str, Any]:
+        results = {
+            "bedrooms": None, "bathrooms": None, "kitchens": None,
+            "parking_spaces": None, "water_supply": False, "electricity": False
+        }
+        
+        bed_match = re.search(r'(\d+)\s*(?:bedroom|መኝታ)', text, re.I)
+        if bed_match: results["bedrooms"] = int(bed_match.group(1))
+        
+        bath_match = re.search(r'(\d+)\s*(?:bathroom|መታጠቢያ|ባኞ)', text, re.I)
+        if bath_match: results["bathrooms"] = int(bath_match.group(1))
+        
+        kit_match = re.search(r'(\d+)\s*(?:kitchen|ወጥ ቤት)', text, re.I)
+        if kit_match: results["kitchens"] = int(kit_match.group(1))
+        
+        park_match = re.search(r'(\d+)\s*(?:parking|መኪና ማቆሚያ)', text, re.I)
+        if park_match: results["parking_spaces"] = int(park_match.group(1))
+        
+        if re.search(r'water|ውሃ', text, re.I): results["water_supply"] = True
+        if re.search(r'electricity|መብራት', text, re.I): results["electricity"] = True
+        
+        return results
 
     def _check_eligibility(self, processed: Dict[str, Any]) -> bool:
         # Valuation eligible if we have price, location, property_type and area

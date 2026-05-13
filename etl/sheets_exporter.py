@@ -97,9 +97,9 @@ class SheetsExporter:
         # Location Mapping
         location_raw = normalized_data.get("location", "")
         formatted.update({
-            "region": raw_data.get("region", "Addis Ababa" if any(x in location_raw for x in ["Addis", "አዲስ"]) else None),
-            "city": raw_data.get("city", "Addis Ababa" if any(x in location_raw for x in ["Addis", "አዲስ"]) else None),
-            "subcity": raw_data.get("subcity") or normalized_data.get("refined_location"),
+            "region": normalized_data.get("region") or raw_data.get("region") or ("Addis Ababa" if any(x in location_raw for x in ["Addis", "አዲስ"]) else None),
+            "city": normalized_data.get("city") or raw_data.get("city") or ("Addis Ababa" if any(x in location_raw for x in ["Addis", "አዲስ"]) else None),
+            "subcity": normalized_data.get("subcity") or raw_data.get("subcity") or normalized_data.get("refined_location"),
             "woreda": raw_data.get("woreda"),
             "neighborhood": raw_data.get("neighborhood"),
             "site_name": raw_data.get("site_name"),
@@ -120,15 +120,15 @@ class SheetsExporter:
             "area_type": normalized_data.get("area_type"),
             "bedrooms": normalized_data.get("bedrooms"),
             "bathrooms": normalized_data.get("bathrooms"),
-            "kitchens": raw_data.get("kitchens"),
+            "kitchens": normalized_data.get("kitchens") or raw_data.get("kitchens"),
             "balcony_count": raw_data.get("balcony_count"),
-            "parking_spaces": raw_data.get("parking_spaces"),
+            "parking_spaces": normalized_data.get("parking_spaces") or raw_data.get("parking_spaces"),
             "finish_state": normalized_data.get("finish_state"),
             "construction_status": raw_data.get("construction_status"),
             "year_built": raw_data.get("year_built"),
-            "total_floors": raw_data.get("total_floors"),
-            "water_supply": raw_data.get("water_supply"),
-            "electricity": raw_data.get("electricity"),
+            "total_floors": normalized_data.get("total_floors") or raw_data.get("total_floors"),
+            "water_supply": "Yes" if normalized_data.get("water_supply") else ("No" if normalized_data.get("water_supply") is False else None),
+            "electricity": "Yes" if normalized_data.get("electricity") else ("No" if normalized_data.get("electricity") is False else None),
             "security_features": raw_data.get("security_features"),
             "content_hash": normalized_data.get("content_hash"),
         })

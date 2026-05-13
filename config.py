@@ -31,6 +31,8 @@ class ScraperConfig:
     retry_delay: float = 5.0
     user_agent: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
     batch_size: int = 100
+    fetch_limit: int = 1000
+    start_date: str = "2025-01-01"
 
 
 @dataclass

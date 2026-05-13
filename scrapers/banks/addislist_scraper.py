@@ -34,15 +34,23 @@ class AddisListScraper(PlaywrightScraper):
         start_time = datetime.utcnow()
         result = ScrapeResult(success=False)
         
+        limit = self.config.scraper.fetch_limit
+        
         try:
             await self._init_browser()
             
             source_types = ["Bank", "Court", "Government"]
             
             for st in source_types:
+                if len(result.listings) >= limit:
+                    break
+                    
                 self.logger.info(f"Scraping AddisList for source type: {st}")
                 listings = await self._scrape_source_type(st)
                 result.listings.extend(listings)
+                
+            if len(result.listings) > limit:
+                result.listings = result.listings[:limit]
                 
             result.success = True
             result.scraped_count = len(result.listings)

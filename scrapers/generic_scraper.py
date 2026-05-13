@@ -46,6 +46,8 @@ class GenericScraper(BaseScraper):
         start_time = datetime.now(timezone.utc)
         result = ScrapeResult(success=False)
         
+        limit = self.config.scraper.fetch_limit
+        
         try:
             # Try a few common paths if base_url is just the homepage
             paths = ["/", "/properties", "/listings", "/tenders", "/auctions", "/property-search", "/houses", "/all-properties"]
@@ -55,6 +57,9 @@ class GenericScraper(BaseScraper):
                 paths = [""]
                 
             for path in paths:
+                if len(result.listings) >= limit:
+                    break
+                    
                 url = self._get_absolute_url(path)
                 self.logger.info(f"Fetching {url}")
                 soup = self.scrape_page(url)
@@ -66,6 +71,9 @@ class GenericScraper(BaseScraper):
                 self.logger.info(f"Found {len(cards)} cards on {url}")
                 
                 for card in cards:
+                    if len(result.listings) >= limit:
+                        break
+                        
                     listing = self.parse_listing_card(card, self.selectors)
                     if listing:
                         # Ensure we have a valid source URL

@@ -59,22 +59,32 @@ class TelegramScraper(BaseScraper):
                 await self.client.start()
         return True
 
-    async def scrape_async(self, limit: int = 100) -> ScrapeResult:
+    async def scrape_async(self, limit: Optional[int] = None) -> ScrapeResult:
         """
         Scrape messages from the configured Telegram channel.
         """
         start_time = datetime.now(timezone.utc)
         result = ScrapeResult(success=False)
         
+        if limit is None:
+            limit = self.config.scraper.fetch_limit
+
+        start_date_str = self.config.scraper.start_date
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        
         if not await self._init_client():
             result.errors.append("Could not initialize Telegram client")
             return result
 
-        logger.info(f"Scraping Telegram channel: {self.channel_id}")
+        logger.info(f"Scraping Telegram channel: {self.channel_id} with limit {limit} and start_date {start_date_str}")
         
         try:
             async with self.client:
                 async for message in self.client.iter_messages(self.channel_id, limit=limit):
+                    if message.date < start_date:
+                        logger.info(f"Reached start_date {start_date_str}, stopping scrape.")
+                        break
+                        
                     if not message.text and not message.media:
                         continue
                     
