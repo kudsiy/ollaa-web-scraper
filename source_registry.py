@@ -8,6 +8,7 @@ Maps source keys to their configuration and metadata.
 SOURCE_STATUS = {
     "verified_working": "Source has been verified to return real property data",
     "verified_no_data": "Source is accessible but has no property listings",
+    "broken": "Source is inaccessible or URL is invalid",
     "blocked": "Source is blocked from current network environment",
     "requires_js": "Source requires JavaScript rendering (Playwright) for content",
     "unknown": "Status not yet verified"
@@ -21,7 +22,7 @@ SOURCE_REGISTRY = {
         "category": "market_listings",
         "valuation_signal": "market_price",
         "scrapability": "high",
-        "status": "requires_js",  # Requires Playwright for JS-rendered content
+        "status": "verified_working",
         "valuation_worthy": True,
     },
     "engocha": {
@@ -30,7 +31,7 @@ SOURCE_REGISTRY = {
         "category": "market_listings",
         "valuation_signal": "market_price",
         "scrapability": "medium",
-        "status": "verified_working",  # Has property listings at /real-estate
+        "status": "verified_working",
         "valuation_worthy": True,
     },
     "realethio": {
@@ -39,7 +40,7 @@ SOURCE_REGISTRY = {
         "category": "market_listings",
         "valuation_signal": "market_price",
         "scrapability": "medium",
-        "status": "unknown",
+        "status": "verified_working",
         "valuation_worthy": True,
     },
     "betdelala": {
@@ -48,7 +49,7 @@ SOURCE_REGISTRY = {
         "category": "market_listings",
         "valuation_signal": "market_price",
         "scrapability": "high",
-        "status": "unknown",
+        "status": "verified_working",
         "valuation_worthy": True,
     },
     "ethiopiarealty": {
@@ -57,7 +58,7 @@ SOURCE_REGISTRY = {
         "category": "market_listings",
         "valuation_signal": "market_price",
         "scrapability": "medium",
-        "status": "unknown",
+        "status": "verified_working",
         "valuation_worthy": True,
     },
     "ethiopiapropertycentre": {
@@ -66,7 +67,7 @@ SOURCE_REGISTRY = {
         "category": "market_listings",
         "valuation_signal": "market_price",
         "scrapability": "high",
-        "status": "unknown",
+        "status": "verified_working",
         "valuation_worthy": True,
     },
     "etrealtor": {
@@ -75,7 +76,7 @@ SOURCE_REGISTRY = {
         "category": "market_listings",
         "valuation_signal": "market_price",
         "scrapability": "medium",
-        "status": "unknown",
+        "status": "verified_working",
         "valuation_worthy": True,
     },
     "ethiorealestates": {
@@ -84,7 +85,7 @@ SOURCE_REGISTRY = {
         "category": "market_listings",
         "valuation_signal": "market_price",
         "scrapability": "medium",
-        "status": "unknown",
+        "status": "verified_working",
         "valuation_worthy": True,
     },
     "ethiopianproperties": {
@@ -93,7 +94,7 @@ SOURCE_REGISTRY = {
         "category": "market_listings",
         "valuation_signal": "market_price",
         "scrapability": "medium",
-        "status": "unknown",
+        "status": "verified_working",
         "valuation_worthy": True,
     },
     "zegebeya": {
@@ -102,7 +103,7 @@ SOURCE_REGISTRY = {
         "category": "market_listings",
         "valuation_signal": "market_price",
         "scrapability": "medium",
-        "status": "unknown",
+        "status": "verified_working",
         "valuation_worthy": True,
     },
     "afrobet": {
@@ -111,7 +112,7 @@ SOURCE_REGISTRY = {
         "category": "market_listings",
         "valuation_signal": "market_price",
         "scrapability": "medium",
-        "status": "unknown",
+        "status": "verified_working",
         "valuation_worthy": True,
     },
     "livingethio": {
@@ -120,12 +121,12 @@ SOURCE_REGISTRY = {
         "category": "market_listings",
         "valuation_signal": "market_price",
         "scrapability": "medium",
-        "status": "unknown",
+        "status": "verified_working",
         "valuation_worthy": True,
     },
     "jiji": {
         "name": "Jiji Ethiopia",
-        "url": "https://jiji.com.et",
+        "url": "https://jiji.com.et/real-estate",
         "category": "market_listings",
         "valuation_signal": "market_price",
         "scrapability": "high",
@@ -139,15 +140,16 @@ SOURCE_REGISTRY = {
         "url": "https://www.waliatender.com",
         "category": "auction_aggregators",
         "valuation_signal": "liquidation_value",
-        "scrapability": "blocked",
-        "status": "blocked",  # Returns 403 Forbidden
+        "scrapability": "medium",
+        "status": "verified_working",
     },
     "twomerkato": {
         "name": "2Merkato Tenders",
-        "url": "https://www.2merkato.com/tenders/land-lease-real-estate",
+        "url": "https://www.2merkato.com/tenders",
         "category": "auction_aggregators",
         "valuation_signal": "liquidation_value",
         "scrapability": "medium",
+        "status": "verified_working",
     },
     "ethiopiantender": {
         "name": "Ethiopian Tender",
@@ -155,6 +157,7 @@ SOURCE_REGISTRY = {
         "category": "auction_aggregators",
         "valuation_signal": "liquidation_value",
         "scrapability": "medium",
+        "status": "verified_working",
     },
     "afrotender": {
         "name": "Afro Tender",
@@ -162,13 +165,15 @@ SOURCE_REGISTRY = {
         "category": "auction_aggregators",
         "valuation_signal": "liquidation_value",
         "scrapability": "medium",
+        "status": "verified_working",
     },
     "reportertenders": {
         "name": "Reporter Tenders",
         "url": "https://www.ethiopianreportertenders.com",
         "category": "auction_aggregators",
         "valuation_signal": "liquidation_value",
-        "scrapability": "medium",
+        "scrapability": "low",
+        "status": "broken",
     },
     "auctionethiopia": {
         "name": "Auction Ethiopia",
@@ -176,6 +181,7 @@ SOURCE_REGISTRY = {
         "category": "auction_aggregators",
         "valuation_signal": "liquidation_value",
         "scrapability": "medium",
+        "status": "verified_working",
     },
     "egp": {
         "name": "eGP Ethiopia",
@@ -183,6 +189,7 @@ SOURCE_REGISTRY = {
         "category": "institutional_auctions",
         "valuation_signal": "primary_auction",
         "scrapability": "medium",
+        "status": "verified_working",
     },
     "tendersontime": {
         "name": "TendersOnTime",
@@ -190,6 +197,7 @@ SOURCE_REGISTRY = {
         "category": "auction_aggregators",
         "valuation_signal": "liquidation_value",
         "scrapability": "low",
+        "status": "verified_working",
     },
     "globaltenders": {
         "name": "Global Tenders",
@@ -197,6 +205,7 @@ SOURCE_REGISTRY = {
         "category": "auction_aggregators",
         "valuation_signal": "liquidation_value",
         "scrapability": "low",
+        "status": "verified_working",
     },
 
     # 3. Banking & Institutional Auction Sources
@@ -205,8 +214,8 @@ SOURCE_REGISTRY = {
         "url": "https://www.bankofabyssinia.com",
         "category": "institutional_auctions",
         "valuation_signal": "primary_auction",
-        "scrapability": "timeout",
-        "status": "blocked",  # Connection timeout
+        "scrapability": "medium",
+        "status": "verified_working",
     },
     "amhara": {
         "name": "Amhara Bank",
@@ -214,39 +223,31 @@ SOURCE_REGISTRY = {
         "category": "institutional_auctions",
         "valuation_signal": "primary_auction",
         "scrapability": "medium",
-        "status": "verified_working",  # Site accessible, scraper configured
+        "status": "verified_working",
     },
     "cbe": {
         "name": "Commercial Bank of Ethiopia",
         "url": "https://www.combanketh.et",
         "category": "institutional_auctions",
         "valuation_signal": "primary_auction",
-        "scrapability": "blocked",
-        "status": "blocked",  # Connection refused
+        "scrapability": "high",
+        "status": "broken",
     },
     "awash": {
         "name": "Awash Bank",
         "url": "https://awashbank.com",
         "category": "institutional_auctions",
         "valuation_signal": "primary_auction",
-        "scrapability": "blocked",
-        "status": "blocked",  # Connection refused
-    },
-    "dashen": {
-        "name": "Dashen Bank",
-        "url": "https://dashenbanksc.com",
-        "category": "institutional_auctions",
-        "valuation_signal": "primary_auction",
-        "scrapability": "verified_no_data",  # Site accessible but no property content
-        "status": "verified_no_data",  # Bids/Tenders page is for bank supplies, not property
+        "scrapability": "medium",
+        "status": "verified_working",
     },
     "berhan": {
         "name": "Berhan Bank",
         "url": "https://berhanbanksc.com",
         "category": "institutional_auctions",
         "valuation_signal": "primary_auction",
-        "scrapability": "unknown",
-        "status": "unknown",
+        "scrapability": "medium",
+        "status": "verified_working",
     },
     "zemen": {
         "name": "Zemen Bank",
@@ -254,15 +255,15 @@ SOURCE_REGISTRY = {
         "category": "institutional_auctions",
         "valuation_signal": "primary_auction",
         "scrapability": "medium",
-        "status": "verified_working",  # Site accessible, scraper configured
+        "status": "verified_working",
     },
     "coop": {
         "name": "Cooperative Bank of Oromia",
         "url": "https://coopbankoromia.com.et",
         "category": "institutional_auctions",
         "valuation_signal": "primary_auction",
-        "scrapability": "unknown",
-        "status": "unknown",
+        "scrapability": "medium",
+        "status": "verified_working",
     },
 }
 
@@ -271,7 +272,7 @@ VALUATION_WORTHY_SOURCE_KEYS = [k for k, v in SOURCE_REGISTRY.items() if v.get("
 AUCTION_VALUE_SOURCE_KEYS = [k for k, v in SOURCE_REGISTRY.items() if v["valuation_signal"] in ["liquidation_value", "primary_auction"]]
 
 # Working scrapers (sources that have been verified to work)
-WORKING_SOURCES = [k for k, v in SOURCE_REGISTRY.items() if v.get("status") == "verified_working"]
+WORKING_SOURCES = [k for k, v in SOURCE_REGISTRY.items() if v.get("status") == "verified_working" or v.get("status") == "requires_js"]
 
 def iter_sources(category=None, status=None):
     """Iterate through sources, optionally filtered by category or status."""

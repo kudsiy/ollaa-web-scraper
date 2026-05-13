@@ -1,3 +1,4 @@
+
 """
 AddisList property scraper.
 Scrapes property listings from addislist.com with source type filtering.
@@ -64,6 +65,12 @@ class AddisListScraper(PlaywrightScraper):
         listings = []
         page = await self.context.new_page()
         
+        # Set extra headers to avoid 406/blocking
+        await page.set_extra_http_headers({
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+        })
+        
         # Map source type to URL parameter
         type_param_map = {
             "Bank": "bank",
@@ -74,16 +81,19 @@ class AddisListScraper(PlaywrightScraper):
         target_url = f"{self.base_url}?type={type_param}"
         
         try:
-            self.logger.info(f"Navigating directly to: {target_url}")
-            await asyncio.sleep(1)  # Throttling
-            await page.goto(target_url, wait_until="networkidle", timeout=60000)
+            self.logger.info(f"Navigating to: {target_url}")
+            await page.goto(target_url, wait_until="domcontentloaded", timeout=60000)
+            await asyncio.sleep(2)
+            await page.wait_for_load_state("networkidle")
             
             # Scrape the results
             content = await page.content()
             soup = BeautifulSoup(content, "html.parser")
             
-            # Adjust selectors based on site structure
-            listing_cards = soup.select(".item-listing, .property-item, .card")
+            # Robust selectors for listing cards
+            listing_cards = soup.select(".item-wrap, .item-listing, .property-item, .card, .listing-item, div[class*='item-'], article")
+            self.logger.info(f"Found {len(listing_cards)} potential cards for {source_type}")
+            
             for card in listing_cards:
                 listing = self._parse_listing_card(card, source_type)
                 if listing:
@@ -99,31 +109,42 @@ class AddisListScraper(PlaywrightScraper):
     def _parse_listing_card(self, card, source_type: str) -> Optional[ScrapedListing]:
         """Parse a listing card from AddisList."""
         try:
-            title_elem = card.select_one("h2, h3, .item-title, .title")
-            price_elem = card.select_one(".item-price, .price")
-            location_elem = card.select_one(".item-location, .location, address")
-            link_elem = card.select_one("a[href]")
+            # Robust selectors
+            title_elem = card.select_one(".item-title a, h2 a, h3 a, .title a, a[href*='/property/']")
+            price_elem = card.select_one(".item-price, .price, .price-text, li[class*='price']")
+            location_elem = card.select_one(".item-location, .location, address, .property-location")
             
             if not title_elem:
                 return None
                 
             title = title_elem.get_text(strip=True)
-            price_text = price_elem.get_text(strip=True) if price_elem else ""
+            
+            price_text = ""
+            if price_elem:
+                price_text = price_elem.get_text(strip=True)
+            else:
+                # Fallback: search for ETB in list items
+                for li in card.select("li"):
+                    if "ETB" in li.get_text():
+                        price_text = li.get_text(strip=True)
+                        break
+            
             price = self.price_extractor.extract(price_text)
             location = location_elem.get_text(strip=True) if location_elem else None
             
             link = self.base_url
-            if link_elem:
-                link = self._get_absolute_url(link_elem.get("href"))
+            href = title_elem.get("href")
+            if href:
+                link = self._get_absolute_url(href)
                 
             return self.create_listing(
                 title=title,
-                description=f"Source Type: {source_type}",
+                description=f"Source Type: {source_type}. {title}",
                 price=price,
                 location=location,
                 source_url=link,
-                raw_data={"source_type": source_type}
+                raw_data={"source_type": source_type, "price_text": price_text}
             )
         except Exception as e:
-            self.logger.error(f"Error parsing AddisList card: {e}")
+            self.logger.debug(f"Error parsing AddisList card: {e}")
             return None

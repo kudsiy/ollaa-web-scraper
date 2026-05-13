@@ -1,17 +1,141 @@
 
 """
 Commercial Bank of Ethiopia auction scraper.
+Uses Playwright to bypass blocks and handle dynamic content.
 """
-from scrapers.banks.keyword_bank_scraper import KeywordBankScraper
+import logging
+import asyncio
+import re
+from datetime import datetime
+from typing import List, Optional
 
-class CBEScraper(KeywordBankScraper):
+from bs4 import BeautifulSoup
+
+from scrapers.base_scraper import PlaywrightScraper, ScrapedListing, ScrapeResult
+from parsers.price_extractor import PriceExtractor
+
+logger = logging.getLogger(__name__)
+
+class CBEScraper(PlaywrightScraper):
     """
-    Scraper for CBE foreclosure auctions.
+    Scraper for Commercial Bank of Ethiopia (CBE) foreclosure auctions.
     """
     
+    base_url = "https://www.combanketh.et"
+    source_name = "Commercial Bank of Ethiopia"
+    
     def __init__(self):
-        super().__init__(
-            source_name="Commercial Bank of Ethiopia",
-            base_url="https://www.combanketh.et",
-            auction_paths=["/notice", "/ማስታወቂያ"]
-        )
+        super().__init__()
+        self.price_extractor = PriceExtractor()
+        
+    async def scrape_async(self) -> ScrapeResult:
+        """
+        Main scraping method for CBE.
+        """
+        start_time = datetime.utcnow()
+        result = ScrapeResult(success=False)
+        
+        try:
+            await self._init_browser()
+            page = await self.context.new_page()
+            
+            # Paths to check for auction notices
+            auction_paths = [
+                "/en/notices",
+                "/notices",
+                "/am/notices",
+                "/ማስታወቂያዎች"
+            ]
+            
+            for path in auction_paths:
+                url = self._get_absolute_url(path)
+                self.logger.info(f"Navigating to CBE Notices: {url}")
+                
+                try:
+                    await page.goto(url, wait_until="networkidle", timeout=60000)
+                    await asyncio.sleep(3)  # Allow time for dynamic content
+                    
+                    content = await page.content()
+                    soup = BeautifulSoup(content, "html.parser")
+                    
+                    # Extract from structured elements
+                    items = soup.select("article, .notice-item, .auction-card, tr, li.list-group-item")
+                    found_count = 0
+                    
+                    for item in items:
+                        text = item.get_text(separator=" ", strip=True)
+                        # Keywords for property auctions
+                        if any(kw in text for kw in ["ሐራጅ", "የሐራጅ", "ጨረታ", "Auction", "Foreclosure", "Tender"]):
+                            listing = self._parse_item(item, url)
+                            if listing:
+                                result.listings.append(listing)
+                                found_count += 1
+                    
+                    # Also look for PDF links specifically
+                    pdf_links = soup.find_all("a", href=re.compile(r"\.pdf$", re.IGNORECASE))
+                    for link in pdf_links:
+                        link_text = link.get_text(strip=True)
+                        href = link.get("href")
+                        if any(kw in link_text for kw in ["ሐራጅ", "ጨረታ", "Auction", "Notice", "Tender"]):
+                            pdf_url = self._get_absolute_url(href)
+                            result.listings.append(self.create_listing(
+                                title=f"Auction Notice: {link_text}",
+                                description=f"Auction notice found in PDF: {link_text}",
+                                source_url=pdf_url,
+                                listing_type="auction",
+                                raw_data={"pdf_url": pdf_url}
+                            ))
+                            found_count += 1
+                            
+                    self.logger.info(f"Found {found_count} potential listings on {url}")
+                    
+                except Exception as e:
+                    self.logger.warning(f"Error scraping path {path}: {e}")
+                    continue
+            
+            result.success = True
+            result.scraped_count = len(result.listings)
+            
+        except Exception as e:
+            self.logger.error(f"Error during CBE scrape: {e}")
+            result.errors.append(str(e))
+        finally:
+            await self._close_browser()
+            
+        result.duration_seconds = (datetime.utcnow() - start_time).total_seconds()
+        return result
+
+    def scrape(self) -> ScrapeResult:
+        """Synchronous wrapper for scrape_async."""
+        return asyncio.run(self.scrape_async())
+        
+    def _parse_item(self, item, current_url: str) -> Optional[ScrapedListing]:
+        """Parse an auction item element."""
+        try:
+            title_elem = item.select_one("h1, h2, h3, h4, .title, .notice-title, a")
+            if not title_elem:
+                return None
+                
+            title = title_elem.get_text(strip=True)
+            if len(title) < 10:  # Skip too short titles
+                return None
+                
+            link_elem = item.select_one("a[href]")
+            source_url = current_url
+            if link_elem:
+                source_url = self._get_absolute_url(link_elem.get("href"))
+                
+            text = item.get_text(separator=" ", strip=True)
+            price = self.price_extractor.extract(text)
+            
+            return self.create_listing(
+                title=title,
+                description=text[:1000],
+                price=price,
+                source_url=source_url,
+                listing_type="auction",
+                raw_data={"raw_html": str(item)[:1000]}
+            )
+        except Exception as e:
+            self.logger.debug(f"Error parsing CBE item: {e}")
+            return None
