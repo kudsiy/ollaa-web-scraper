@@ -265,6 +265,24 @@ SOURCE_REGISTRY = {
         "scrapability": "medium",
         "status": "verified_working",
     },
+
+    # 4. Telegram Channels
+    "telegram_ethio_real_estate": {
+        "name": "Ethio Real Estate Telegram",
+        "url": "https://t.me/EthioRealEstate1",
+        "channel_id": "EthioRealEstate1",
+        "category": "telegram_channels",
+        "valuation_signal": "market_price",
+        "status": "verified_working",
+    },
+    "telegram_betoch": {
+        "name": "Betoch Telegram",
+        "url": "https://t.me/betoch_kom",
+        "channel_id": "betoch_kom",
+        "category": "telegram_channels",
+        "valuation_signal": "market_price",
+        "status": "verified_working",
+    },
 }
 
 MARKET_PRICE_SOURCE_KEYS = [k for k, v in SOURCE_REGISTRY.items() if v["valuation_signal"] == "market_price"]

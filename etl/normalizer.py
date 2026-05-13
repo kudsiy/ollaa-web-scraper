@@ -48,6 +48,12 @@ class Normalizer:
         }
         semantic_results = self.semantic_engine.process(semantic_input)
 
+        # Merge semantic results into raw_data for future use
+        merged_raw_data = self._normalize_raw_data(raw_data)
+        merged_raw_data.update({k: v for k, v in semantic_results.items() if v is not None})
+        if hasattr(listing, 'source_key'):
+            merged_raw_data["source_key"] = listing.source_key
+
         normalized = {
             "source_url": self._normalize_url(listing.source_url),
             "source_name": self._normalize_text(listing.source_name),
@@ -74,7 +80,40 @@ class Normalizer:
             "valuation_eligible": semantic_results.get("valuation_eligible", False),
             "content_hash": self._generate_hash(listing),
             "scraped_at": datetime.utcnow(),
-            "raw_data": self._normalize_raw_data(listing.raw_data),
+            "raw_data": merged_raw_data,
+        }
+        
+        # Add standardized column groups for Google Sheets export
+        normalized["identity_group"] = {
+            "source_key": merged_raw_data.get("source_key"),
+            "source_name": normalized.get("source_name"),
+            "source_url": normalized.get("source_url"),
+            "title": normalized.get("title"),
+            "property_type": normalized.get("property_type"),
+            "listing_type": normalized.get("listing_type"),
+            "listing_class": normalized.get("listing_class"),
+        }
+        
+        normalized["pricing_group"] = {
+            "price": normalized.get("price"),
+            "currency": normalized.get("price_currency"),
+            "bank_loan_pct": merged_raw_data.get("bank_loan_pct"),
+            "down_payment": merged_raw_data.get("down_payment"),
+            "valuation_eligible": normalized.get("valuation_eligible"),
+        }
+        
+        normalized["location_group"] = {
+            "location": normalized.get("location"),
+            "refined_location": semantic_results.get("refined_location"),
+            "floor_level": normalized.get("floor_level"),
+        }
+        
+        normalized["size_group"] = {
+            "area_sqm": normalized.get("area_sqm"),
+            "area_type": normalized.get("area_type"),
+            "bedrooms": normalized.get("bedrooms"),
+            "bathrooms": normalized.get("bathrooms"),
+            "finish_state": normalized.get("finish_state"),
         }
         
         return normalized
@@ -283,13 +322,18 @@ class Normalizer:
             return {}
             
         normalized = {}
-        for key, value in raw_data.items():
-            if value is not None:
-                if isinstance(value, (str, int, float, bool, list, dict)):
-                    normalized[str(key)] = value
+        if isinstance(raw_data, dict):
+            for key, value in raw_data.items():
+                if value is not None:
+                    if isinstance(value, (str, int, float, bool, list, dict)):
+                        normalized[str(key)] = value
+        elif isinstance(raw_data, str):
+            # If it's already a string, we might want to try to parse it as JSON
+            # But for now, let's just keep it as is if it's not a dict
+            pass
                     
         return normalized
-    
+
     def validate_normalized(self, data: Dict[str, Any]) -> tuple:
         """
         Validate normalized data before insert.
