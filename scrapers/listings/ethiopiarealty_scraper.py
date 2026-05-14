@@ -16,5 +16,11 @@ class EthiopiaRealtyScraper(EngochaScraper):
     
     def _find_listing_pages(self):
         return [
-            f"{self.base_url}/properties/",
+            f"{self.base_url}/condominium-for-sale-in-addis-ababa-ethiopia/",
+            f"{self.base_url}/houses-for-rent/",
+            f"{self.base_url}/apartment-for-rent/",
+            f"{self.base_url}/land-for-sale/",
+            f"{self.base_url}/building-for-sale/",
+            f"{self.base_url}/condominium-for-rent-2/",
+            f"{self.base_url}/guest-house-for-rent/",
         ]
