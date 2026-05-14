@@ -14,6 +14,7 @@ from source_registry import SOURCE_REGISTRY
 from etl.normalizer import Normalizer
 from etl.sheets_exporter import SheetsExporter
 from etl.deduplicator import Deduplicator
+from config import config
 
 # Import all scrapers
 from scrapers.banks import (
@@ -83,13 +84,20 @@ async def run_exporter_async():
     }
     
     all_normalized_listings = []
+    fetch_limit = config.scraper.fetch_limit
+    start_date_str = config.scraper.start_date
+    start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
     
     # Filter to only working sources as defined in source_registry
     verified_sources = [k for k, v in SOURCE_REGISTRY.items() if v.get("status") in ["verified_working", "requires_js"]]
     
-    logger.info(f"Starting unified export for {len(verified_sources)} verified sources")
+    logger.info(f"Starting unified export for {len(verified_sources)} verified sources. Limit: {fetch_limit}, Start Date: {start_date_str}")
     
     for source_key in verified_sources:
+        if len(all_normalized_listings) >= fetch_limit:
+            logger.info(f"Fetch limit reached ({fetch_limit}). Stopping.")
+            break
+        
         if source_key not in scraper_instances:
             logger.warning(f"No scraper implementation found for verified source: {source_key}")
             continue
@@ -109,17 +117,24 @@ async def run_exporter_async():
             if result.success:
                 logger.info(f"Successfully scraped {len(result.listings)} listings from {source_key}")
                 for listing in result.listings:
+                    if len(all_normalized_listings) >= fetch_limit:
+                        break
+
                     # Inject source_key into listing for normalizer to pick up
                     listing.source_key = source_key
-                    
+
                     # Normalize listing
                     normalized = normalizer.normalize_listing(listing)
+
+                    # Date filtering
+                    posted_date = normalized.get("posted_date")
+                    if posted_date and posted_date < start_date:
+                        continue
+
                     normalized["source_key"] = source_key
-                    
                     all_normalized_listings.append(normalized)
             else:
                 logger.error(f"Scraper {source_key} failed: {result.errors}")
-                
         except Exception as e:
             logger.exception(f"Unexpected error running scraper {source_key}: {e}")
 

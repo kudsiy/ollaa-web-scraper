@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-05-13T20:44:49.400004+00:00",
+  "timestamp": "2026-05-14T17:31:01.779243+00:00",
   "import_tests": [
     {
       "module": "requests",
@@ -334,9 +334,9 @@
     {
       "name": "Walia Tender",
       "url": "https://www.waliatender.com",
-      "status": "accessible",
-      "status_code": 200,
-      "error": null
+      "status": "error",
+      "status_code": 403,
+      "error": "HTTP 403"
     },
     {
       "name": "AddisList",
