@@ -42,6 +42,7 @@ from scrapers.listings import (
 )
 from scrapers.telegram_scraper import TelegramScraper
 from etl.sheets_exporter import SheetsExporter
+from etl.sheets_uploader import SheetsUploader
 
 
 logger = logging.getLogger(__name__)
@@ -58,6 +59,7 @@ class ScraperScheduler:
         self.normalizer = Normalizer()
         self.db_writer = DBWriter()
         self.sheets_exporter = SheetsExporter()
+        self.sheets_uploader = SheetsUploader(self.config.sheets)
         
         # Initialize deduplicator with a live connection if possible
         try:
@@ -302,6 +304,10 @@ class ScraperScheduler:
             if unique_listings:
                 export_filename = f"exports/unified_listings_{datetime.utcnow().strftime('%Y%m%d')}.csv"
                 self.sheets_exporter.export_to_csv(unique_listings, export_filename)
+                
+                # Upload to Google Sheets if enabled
+                if self.config.sheets.enabled:
+                    self.sheets_uploader.upload_listings(unique_listings)
             
             self._update_stats(
                 scrape_count=1,

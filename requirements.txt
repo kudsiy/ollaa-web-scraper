@@ -39,3 +39,7 @@ telethon>=1.31.0
 pytest>=7.4.0
 pytest-asyncio>=0.21.0
 pytest-cov>=4.1.0
+
+# Google Sheets Integration
+gspread>=6.0.0
+google-auth>=2.27.0

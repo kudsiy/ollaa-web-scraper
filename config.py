@@ -54,12 +54,22 @@ class SchedulerConfig:
 
 
 @dataclass
+class GoogleSheetsConfig:
+    """Google Sheets integration configuration."""
+    enabled: bool = os.getenv("GOOGLE_SHEETS_ENABLED", "false").lower() == "true"
+    spreadsheet_id: str = os.getenv("GOOGLE_SHEETS_SPREADSHEET_ID", "")
+    credentials_file: str = os.getenv("GOOGLE_SHEETS_CREDENTIALS_FILE", "credentials.json")
+    sheet_name: str = os.getenv("GOOGLE_SHEETS_SHEET_NAME", "Property Data")
+
+
+@dataclass
 class Config:
     """Main configuration container."""
     db: DatabaseConfig = field(default_factory=DatabaseConfig)
     scraper: ScraperConfig = field(default_factory=ScraperConfig)
     log: LogConfig = field(default_factory=LogConfig)
     scheduler: SchedulerConfig = field(default_factory=SchedulerConfig)
+    sheets: GoogleSheetsConfig = field(default_factory=GoogleSheetsConfig)
 
 
 # Global config instance

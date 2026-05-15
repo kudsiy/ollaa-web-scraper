@@ -13,6 +13,7 @@ from typing import List, Dict, Any
 from source_registry import SOURCE_REGISTRY
 from etl.normalizer import Normalizer
 from etl.sheets_exporter import SheetsExporter
+from etl.sheets_uploader import SheetsUploader
 from etl.deduplicator import Deduplicator
 from config import config
 
@@ -49,6 +50,7 @@ async def run_exporter_async():
     """Run all verified scrapers and export results to JSON and CSV."""
     normalizer = Normalizer()
     sheets_exporter = SheetsExporter()
+    sheets_uploader = SheetsUploader(config.sheets)
     deduplicator = Deduplicator()
     
     # Map source keys to scraper instances
@@ -157,6 +159,10 @@ async def run_exporter_async():
     try:
         sheets_exporter.export_to_csv(unique_listings, csv_output_file)
         logger.info(f"Successfully exported {len(unique_listings)} listings to {csv_output_file}")
+        
+        # Upload to Google Sheets if enabled
+        if config.sheets.enabled:
+            sheets_uploader.upload_listings(unique_listings)
     except Exception as e:
         logger.error(f"Failed to write CSV output file: {e}")
 
