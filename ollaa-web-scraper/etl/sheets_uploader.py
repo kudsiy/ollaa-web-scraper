@@ -102,3 +102,28 @@ class SheetsUploader:
         except Exception as e:
             logger.error(f"Failed to upload rows to Google Sheet: {e}")
             return False
+
+if __name__ == "__main__":
+    import json
+    import os
+    
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    
+    uploader = SheetsUploader()
+    json_file = "property_data.json"
+    
+    if os.path.exists(json_file):
+        logger.info(f"Reading listings from {json_file}")
+        try:
+            with open(json_file, "r", encoding="utf-8") as f:
+                listings = json.load(f)
+            logger.info(f"Found {len(listings)} listings. Starting upload...")
+            uploader.upload_listings(listings)
+        except Exception as e:
+            logger.error(f"Error during standalone upload: {e}")
+    else:
+        logger.error(f"JSON file {json_file} not found. Run json_exporter.py first.")
