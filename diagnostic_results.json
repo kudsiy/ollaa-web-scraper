@@ -1,0 +1,416 @@
+{
+  "timestamp": "2026-05-14T17:31:01.779243+00:00",
+  "import_tests": [
+    {
+      "module": "requests",
+      "status": "pass",
+      "error": null
+    },
+    {
+      "module": "beautifulsoup4",
+      "status": "pass",
+      "error": null
+    },
+    {
+      "module": "playwright",
+      "status": "pass",
+      "error": null
+    },
+    {
+      "module": "pdfplumber",
+      "status": "pass",
+      "error": null
+    },
+    {
+      "module": "pytesseract",
+      "status": "pass",
+      "error": null
+    },
+    {
+      "module": "pdf2image",
+      "status": "pass",
+      "error": null
+    },
+    {
+      "module": "config",
+      "status": "pass",
+      "error": null
+    },
+    {
+      "module": "parsers.price_extractor",
+      "status": "pass",
+      "error": null
+    },
+    {
+      "module": "parsers.amharic_parser",
+      "status": "pass",
+      "error": null
+    },
+    {
+      "module": "parsers.ocr_engine",
+      "status": "pass",
+      "error": null
+    },
+    {
+      "module": "scrapers.base_scraper",
+      "status": "pass",
+      "error": null
+    }
+  ],
+  "scraper_tests": [
+    {
+      "scraper": "CBE",
+      "class_path": "scrapers.banks.cbe_scraper.CBEScraper",
+      "status": "success",
+      "listings_found": 0,
+      "errors": [
+        "No listings found"
+      ],
+      "has_price": false,
+      "has_location": false,
+      "sample_listing": null
+    },
+    {
+      "scraper": "Awash Bank",
+      "class_path": "scrapers.banks.awash_scraper.AwashBankScraper",
+      "status": "success",
+      "listings_found": 0,
+      "errors": [
+        "No listings found"
+      ],
+      "has_price": false,
+      "has_location": false,
+      "sample_listing": null
+    },
+    {
+      "scraper": "Dashen Bank",
+      "class_path": "scrapers.banks.dashen_scraper.DashenBankScraper",
+      "status": "success",
+      "listings_found": 0,
+      "errors": [
+        "No listings found"
+      ],
+      "has_price": false,
+      "has_location": false,
+      "sample_listing": null
+    },
+    {
+      "scraper": "Zemen Bank",
+      "class_path": "scrapers.banks.zemen_scraper.ZemenBankScraper",
+      "status": "success",
+      "listings_found": 0,
+      "errors": [
+        "No listings found"
+      ],
+      "has_price": false,
+      "has_location": false,
+      "sample_listing": null
+    },
+    {
+      "scraper": "Abyssinia Bank",
+      "class_path": "scrapers.banks.abyssinia_scraper.AbyssiniaBankScraper",
+      "status": "working",
+      "listings_found": 8,
+      "errors": [],
+      "has_price": false,
+      "has_location": true,
+      "sample_listing": {
+        "title": "Tenders",
+        "price": null,
+        "location": "\u12a0\u12f2\u1235 \u12a0\u1260\u1263 \u12a8\u1270\u121b \u1242\u122d\u1246\u1235 \u12ad/\u12a8\u1270\u121b \u12c8\u1228\u12f3 4 \u12a0\u120d\u1353\u12cd\u120e \u1205\u1295\u133b 3\u129b \u134e\u1245 \u12e8\u1263\u1295\u12a9 \u1205\u130d \u1218\u121d\u122a\u12eb \u1262\u122e \u1290\u12cd\u1361\u1361\u1208\u1270\u1328\u121b\u122a \u1218\u1228\u1303 \u1260\u1235\u120d\u12ad \u1241\u1325\u122d 0115 54 67 37/36 \u12a0",
+        "listing_type": "auction"
+      }
+    },
+    {
+      "scraper": "Amhara Bank",
+      "class_path": "scrapers.banks.amhara_scraper.AmharaBankScraper",
+      "status": "success",
+      "listings_found": 0,
+      "errors": [
+        "No listings found"
+      ],
+      "has_price": false,
+      "has_location": false,
+      "sample_listing": null
+    },
+    {
+      "scraper": "Berhan Bank",
+      "class_path": "scrapers.banks.berhan_scraper.BerhanBankScraper",
+      "status": "success",
+      "listings_found": 0,
+      "errors": [
+        "No listings found"
+      ],
+      "has_price": false,
+      "has_location": false,
+      "sample_listing": null
+    },
+    {
+      "scraper": "Coop Bank",
+      "class_path": "scrapers.banks.coop_scraper.CoopBankScraper",
+      "status": "success",
+      "listings_found": 0,
+      "errors": [
+        "No listings found"
+      ],
+      "has_price": false,
+      "has_location": false,
+      "sample_listing": null
+    },
+    {
+      "scraper": "Walia Tender",
+      "class_path": "scrapers.tenders.waliatender_scraper.WaliaTenderScraper",
+      "status": "working",
+      "listings_found": 6,
+      "errors": [],
+      "has_price": false,
+      "has_location": false,
+      "sample_listing": {
+        "title": "\u12f5\u122d\u1305\u1275 \u12a8\u12da\u1205 \u1260\u1273\u127d \u12e8\u1270\u12d8\u1228\u12d8\u1229\u1275\u1295 \u1260\u1260\u1300\u1275 \u12a0\u1218\u1271 \u12e8\u121a\u12eb\u1230\u122b\u1328\u12cd\u1295 \u12e8\u1270\u1208\u12eb\u12e9 \u12d3\u12ed\u1290\u1275 \u12e8\u12f0\u1295\u1265 \u12a0\u120d\u1263\u1233\u1275 \u130d\u12e5 \u1260\u130d\u120d\u133d \u1328\u1228\u1273 \u12a0\u12c8\u12f3\u12f5\u122e \u1208\u1218\u130d\u12db\u1275 \u12ed\u1348\u120d\u130b\u120d\u1361\u1361FREE",
+        "price": null,
+        "location": null,
+        "listing_type": "tender"
+      }
+    },
+    {
+      "scraper": "Engocha",
+      "class_path": "scrapers.listings.engocha_scraper.EngochaScraper",
+      "status": "working",
+      "listings_found": 136,
+      "errors": [],
+      "has_price": true,
+      "has_location": false,
+      "sample_listing": {
+        "title": "Relevance",
+        "price": null,
+        "location": null,
+        "listing_type": "sale"
+      }
+    },
+    {
+      "scraper": "AddisList",
+      "class_path": "scrapers.banks.addislist_scraper.AddisListScraper",
+      "status": "success",
+      "listings_found": 0,
+      "errors": [
+        "No listings found"
+      ],
+      "has_price": false,
+      "has_location": false,
+      "sample_listing": null
+    }
+  ],
+  "amharic_keyword_tests": [
+    {
+      "input": "\u12e8\u1210\u122b\u1305 \u1264\u1275",
+      "status": "pass",
+      "details": {
+        "keyword_found": true,
+        "detected_script": "amharic"
+      }
+    },
+    {
+      "input": "\u1328\u1228\u1273 \u1231\u121a",
+      "status": "pass",
+      "details": {
+        "keyword_found": true,
+        "detected_script": "amharic"
+      }
+    },
+    {
+      "input": "\u1203\u122b\u1305 \u123d\u12eb\u132d",
+      "status": "pass",
+      "details": {
+        "keyword_found": true,
+        "detected_script": "amharic"
+      }
+    },
+    {
+      "input": "\u1210\u122b\u1305 \u121b\u1235\u1273\u12c8\u1245\u12eb",
+      "status": "pass",
+      "details": {
+        "keyword_found": true,
+        "detected_script": "amharic"
+      }
+    },
+    {
+      "input": "\u123d\u12eb\u12ed \u1264\u1275",
+      "status": "pass",
+      "details": {
+        "keyword_found": true,
+        "detected_script": "amharic"
+      }
+    },
+    {
+      "input": "\u1208\u123d\u1321",
+      "status": "pass",
+      "details": {
+        "keyword_found": true,
+        "detected_script": "amharic"
+      }
+    },
+    {
+      "input": "\u12aa\u122b\u12ed \u1264\u1275",
+      "status": "pass",
+      "details": {
+        "keyword_found": true,
+        "detected_script": "amharic"
+      }
+    },
+    {
+      "input": "\u1264\u1275 \u1260\u1266\u120c",
+      "status": "pass",
+      "details": {
+        "extracted_location": "\u1266\u120c",
+        "expected_location": "Bole"
+      }
+    },
+    {
+      "input": "\u12a0\u1353\u122d\u1275\u121b\u1295\u1275 \u1260\u12a0\u12f2\u1235 \u12a0\u1260\u1263",
+      "status": "pass",
+      "details": {
+        "extracted_location": "\u12a0\u12f2\u1235 \u12a0\u1260\u1263",
+        "expected_location": "Addis"
+      }
+    }
+  ],
+  "url_accessibility_tests": [
+    {
+      "name": "CBE",
+      "url": "https://www.combanketh.et",
+      "status": "connection_error",
+      "status_code": null,
+      "error": "Connection refused or DNS error"
+    },
+    {
+      "name": "Awash Bank",
+      "url": "https://awashbank.com",
+      "status": "connection_error",
+      "status_code": null,
+      "error": "Connection refused or DNS error"
+    },
+    {
+      "name": "Dashen Bank",
+      "url": "https://dashenbanksc.com",
+      "status": "accessible",
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "name": "Zemen Bank",
+      "url": "https://www.zemenbank.com",
+      "status": "accessible",
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "name": "Bank of Abyssinia",
+      "url": "https://www.bankofabyssinia.com",
+      "status": "timeout",
+      "status_code": null,
+      "error": "Connection timeout"
+    },
+    {
+      "name": "Amhara Bank",
+      "url": "https://www.amharabank.com.et",
+      "status": "accessible",
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "name": "Berhan Bank",
+      "url": "https://berhanbanksc.com",
+      "status": "accessible",
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "name": "Coop Bank",
+      "url": "https://coopbankoromia.com.et",
+      "status": "error",
+      "status_code": 403,
+      "error": "HTTP 403"
+    },
+    {
+      "name": "Walia Tender",
+      "url": "https://www.waliatender.com",
+      "status": "error",
+      "status_code": 403,
+      "error": "HTTP 403"
+    },
+    {
+      "name": "AddisList",
+      "url": "https://addislist.com",
+      "status": "error",
+      "status_code": 406,
+      "error": "HTTP 406"
+    },
+    {
+      "name": "Engocha",
+      "url": "https://engocha.com",
+      "status": "accessible",
+      "status_code": 200,
+      "error": null
+    }
+  ],
+  "summary": {
+    "total_tests": 20,
+    "passed": 20,
+    "failed": 0,
+    "warnings": 0
+  },
+  "working_scrapers": [
+    {
+      "name": "Abyssinia Bank",
+      "listings": 8,
+      "has_price": false,
+      "has_location": true
+    },
+    {
+      "name": "Walia Tender",
+      "listings": 6,
+      "has_price": false,
+      "has_location": false
+    },
+    {
+      "name": "Engocha",
+      "listings": 136,
+      "has_price": true,
+      "has_location": false
+    }
+  ],
+  "failed_scrapers": [
+    {
+      "name": "CBE",
+      "reason": "No listings found"
+    },
+    {
+      "name": "Awash Bank",
+      "reason": "No listings found"
+    },
+    {
+      "name": "Dashen Bank",
+      "reason": "No listings found"
+    },
+    {
+      "name": "Zemen Bank",
+      "reason": "No listings found"
+    },
+    {
+      "name": "Amhara Bank",
+      "reason": "No listings found"
+    },
+    {
+      "name": "Berhan Bank",
+      "reason": "No listings found"
+    },
+    {
+      "name": "Coop Bank",
+      "reason": "No listings found"
+    },
+    {
+      "name": "AddisList",
+      "reason": "No listings found"
+    }
+  ]
+}
