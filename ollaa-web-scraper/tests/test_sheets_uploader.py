@@ -3,7 +3,7 @@ Test script for Google Sheets Uploader.
 Mocks gspread and credentials for verification.
 """
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, call
 import os
 import sys
 
@@ -42,6 +42,8 @@ class TestSheetsUploader(unittest.TestCase):
         mock_client = MagicMock()
         mock_spreadsheet = MagicMock()
         mock_worksheet = MagicMock()
+        mock_worksheet.col_count = 57
+        mock_worksheet.row_values.return_value = []  # Empty headers
         
         uploader.client = mock_client
         mock_client.open_by_key.return_value = mock_spreadsheet
@@ -51,18 +53,68 @@ class TestSheetsUploader(unittest.TestCase):
         mock_spreadsheet.worksheet.side_effect = gspread.exceptions.WorksheetNotFound
         mock_spreadsheet.add_worksheet.return_value = mock_worksheet
         
-        # Mock empty sheet
-        mock_worksheet.get_all_values.return_value = []
+        ws = uploader._get_worksheet()
+        
+        self.assertEqual(ws, mock_worksheet)
+        mock_spreadsheet.add_worksheet.assert_called_once_with(
+            title=self.mock_config.sheet_name, rows="100", cols="57"
+        )
+        # Should verify and update headers via _ensure_headers
+        mock_worksheet.row_values.assert_called_once_with(1)
+        mock_worksheet.update.assert_called_once_with(
+            'A1:BE1', [UNIFIED_SCHEMA], value_input_option='RAW'
+        )
+
+    @patch('etl.sheets_uploader.SheetsUploader._authenticate')
+    def test_get_worksheet_existing_with_wrong_headers(self, mock_auth):
+        mock_auth.return_value = True
+        uploader = SheetsUploader(self.mock_config)
+        
+        mock_client = MagicMock()
+        mock_spreadsheet = MagicMock()
+        mock_worksheet = MagicMock()
+        mock_worksheet.col_count = 57
+        # Return incorrect headers
+        mock_worksheet.row_values.return_value = ["wrong", "headers"]
+        
+        uploader.client = mock_client
+        mock_client.open_by_key.return_value = mock_spreadsheet
+        mock_spreadsheet.worksheet.return_value = mock_worksheet
         
         ws = uploader._get_worksheet()
         
         self.assertEqual(ws, mock_worksheet)
-        mock_spreadsheet.add_worksheet.assert_called_once_with(title=self.mock_config.sheet_name, rows="100", cols="57")
-        mock_worksheet.append_row.assert_called_once_with(UNIFIED_SCHEMA)
+        mock_worksheet.row_values.assert_called_once_with(1)
+        mock_worksheet.update.assert_called_once_with(
+            'A1:BE1', [UNIFIED_SCHEMA], value_input_option='RAW'
+        )
+
+    @patch('etl.sheets_uploader.SheetsUploader._authenticate')
+    def test_get_worksheet_existing_with_correct_headers(self, mock_auth):
+        mock_auth.return_value = True
+        uploader = SheetsUploader(self.mock_config)
+        
+        mock_client = MagicMock()
+        mock_spreadsheet = MagicMock()
+        mock_worksheet = MagicMock()
+        mock_worksheet.col_count = 57
+        mock_worksheet.row_values.return_value = list(UNIFIED_SCHEMA)  # Correct headers
+        
+        uploader.client = mock_client
+        mock_client.open_by_key.return_value = mock_spreadsheet
+        mock_spreadsheet.worksheet.return_value = mock_worksheet
+        
+        ws = uploader._get_worksheet()
+        
+        self.assertEqual(ws, mock_worksheet)
+        mock_worksheet.row_values.assert_called_once_with(1)
+        # update should NOT be called when headers are already correct
+        mock_worksheet.update.assert_not_called()
 
     @patch('etl.sheets_uploader.SheetsUploader._get_worksheet')
     def test_upload_listings(self, mock_get_ws):
         mock_ws = MagicMock()
+        mock_ws.col_values.return_value = []  # No existing hashes
         mock_get_ws.return_value = mock_ws
         
         uploader = SheetsUploader(self.mock_config)
@@ -74,10 +126,79 @@ class TestSheetsUploader(unittest.TestCase):
         result = uploader.upload_listings(test_listings)
         
         self.assertTrue(result)
+        # Should check for existing hashes
+        mock_ws.col_values.assert_called_once_with(57)
+        # Should append rows with RAW input option
         mock_ws.append_rows.assert_called_once()
-        rows = mock_ws.append_rows.call_args[0][0]
+        args, kwargs = mock_ws.append_rows.call_args
+        self.assertEqual(kwargs.get('value_input_option'), 'RAW')
+        rows = args[0]
         self.assertEqual(len(rows), 1)
         self.assertEqual(len(rows[0]), 57)
+
+    @patch('etl.sheets_uploader.SheetsUploader._get_worksheet')
+    def test_upload_listings_deduplication(self, mock_get_ws):
+        """Test that listings with existing content_hash are skipped."""
+        mock_ws = MagicMock()
+        # Simulate existing content hashes in the sheet
+        existing_hash = "abcdef1234567890"
+        mock_ws.col_values.return_value = ["content_hash", existing_hash]
+        mock_get_ws.return_value = mock_ws
+        
+        uploader = SheetsUploader(self.mock_config)
+        
+        test_listings = [
+            {"title": "Existing Property", "content_hash": existing_hash, "source_name": "Source A"},
+            {"title": "New Property", "content_hash": "new_hash_12345", "source_name": "Source B"},
+            {"title": "No Hash Property", "source_name": "Source C"},
+        ]
+        
+        result = uploader.upload_listings(test_listings)
+        
+        self.assertTrue(result)
+        # Should check for existing hashes
+        mock_ws.col_values.assert_called_once_with(57)
+        # Should append only 2 rows (the new and the no-hash one)
+        mock_ws.append_rows.assert_called_once()
+        args, kwargs = mock_ws.append_rows.call_args
+        self.assertEqual(kwargs.get('value_input_option'), 'RAW')
+        rows = args[0]
+        self.assertEqual(len(rows), 2, "Should upload 2 listings (1 new + 1 without hash), skipping the duplicate")
+
+    @patch('etl.sheets_uploader.SheetsUploader._get_worksheet')
+    def test_upload_listings_all_duplicates(self, mock_get_ws):
+        """Test that when all listings are duplicates, nothing is uploaded."""
+        mock_ws = MagicMock()
+        existing_hash = "duplicate_hash"
+        mock_ws.col_values.return_value = ["content_hash", existing_hash]
+        mock_get_ws.return_value = mock_ws
+        
+        uploader = SheetsUploader(self.mock_config)
+        
+        test_listings = [
+            {"title": "Dup 1", "content_hash": existing_hash, "source_name": "Source A"},
+            {"title": "Dup 2", "content_hash": existing_hash, "source_name": "Source B"},
+        ]
+        
+        result = uploader.upload_listings(test_listings)
+        
+        self.assertTrue(result)
+        # append_rows should NOT be called since all are duplicates
+        mock_ws.append_rows.assert_not_called()
+
+    @patch('etl.sheets_uploader.SheetsUploader._get_worksheet')
+    def test_upload_listings_empty(self, mock_get_ws):
+        """Test that empty listings list returns True without sheet interaction."""
+        mock_ws = MagicMock()
+        mock_get_ws.return_value = mock_ws
+        
+        uploader = SheetsUploader(self.mock_config)
+        
+        result = uploader.upload_listings([])
+        
+        self.assertTrue(result)
+        mock_ws.col_values.assert_not_called()
+        mock_ws.append_rows.assert_not_called()
 
 if __name__ == '__main__':
     unittest.main()

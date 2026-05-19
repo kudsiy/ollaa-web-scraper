@@ -53,7 +53,7 @@ class SheetsUploader:
             return False
 
     def _get_worksheet(self):
-        """Get or create the worksheet."""
+        """Get or create the worksheet with verified headers and correct column count."""
         if self.worksheet:
             return self.worksheet
 
@@ -71,19 +71,39 @@ class SheetsUploader:
                 logger.info(f"Worksheet '{sheet_name}' not found. Creating it.")
                 self.worksheet = self.spreadsheet.add_worksheet(title=sheet_name, rows="100", cols="57")
 
-            # Check if sheet is empty and needs headers
-            if not self.worksheet.get_all_values():
-                logger.info("Sheet is empty. Adding headers.")
-                self.worksheet.append_row(UNIFIED_SCHEMA)
+            # Ensure sheet has at least 57 columns for the unified schema
+            if self.worksheet.col_count < 57:
+                logger.info(f"Sheet has {self.worksheet.col_count} columns. Resizing to 57.")
+                self.worksheet.resize(cols=57)
+
+            # Verify and fix headers in row 1
+            self._ensure_headers()
 
             return self.worksheet
         except Exception as e:
             logger.error(f"Failed to access Google Sheet: {e}")
             return None
 
+    def _ensure_headers(self):
+        """Ensure row 1 contains the correct UNIFIED_SCHEMA headers."""
+        try:
+            existing_headers = self.worksheet.row_values(1)
+        except Exception:
+            existing_headers = []
+
+        if existing_headers == UNIFIED_SCHEMA:
+            return
+
+        logger.info("Headers are missing or incorrect. Updating headers.")
+        # Overwrite row 1 with the correct schema headers
+        # Use RAW input option to prevent any formatting interpretation
+        self.worksheet.update('A1:BE1', [UNIFIED_SCHEMA], value_input_option='RAW')
+        logger.info("Headers updated successfully.")
+
     def upload_listings(self, listings: List[Dict[str, Any]]) -> bool:
         """
         Upload a list of normalized listings to Google Sheets.
+        Performs sheet-level deduplication using content_hash.
         """
         if not listings:
             return True
@@ -93,13 +113,42 @@ class SheetsUploader:
             return False
 
         try:
-            formatted_listings = [self.exporter.format_listing(l) for l in listings]
+            # Sheet-level deduplication: fetch existing content_hashes from column 57
+            existing_hashes = set()
+            try:
+                hash_values = worksheet.col_values(57)
+                # Skip header row (index 0) and any empty values
+                existing_hashes = set(h for h in hash_values[1:] if h)
+                if existing_hashes:
+                    logger.info(f"Found {len(existing_hashes)} existing content hashes in sheet")
+            except Exception as e:
+                logger.warning(f"Could not fetch existing content hashes from sheet: {e}")
+
+            # Filter out listings that already exist in the sheet
+            filtered_listings = []
+            duplicate_count = 0
+            for l in listings:
+                content_hash = l.get("content_hash")
+                if content_hash and content_hash in existing_hashes:
+                    duplicate_count += 1
+                else:
+                    filtered_listings.append(l)
+
+            if duplicate_count > 0:
+                logger.info(f"Skipped {duplicate_count} duplicate listing(s) already present in the sheet")
+
+            if not filtered_listings:
+                logger.info("All listings are duplicates. Nothing to upload.")
+                return True
+
+            formatted_listings = [self.exporter.format_listing(l) for l in filtered_listings]
             rows_to_append = []
             for listing in formatted_listings:
                 row = [listing.get(col) for col in UNIFIED_SCHEMA]
                 rows_to_append.append(row)
 
-            worksheet.append_rows(rows_to_append)
+            # Use RAW input option to prevent Google Sheets from interpreting values as formulas
+            worksheet.append_rows(rows_to_append, value_input_option='RAW')
             logger.info(f"Successfully uploaded {len(rows_to_append)} rows to Google Sheet.")
             return True
         except Exception as e:
