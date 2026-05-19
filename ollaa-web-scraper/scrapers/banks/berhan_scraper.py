@@ -13,5 +13,14 @@ class BerhanBankScraper(KeywordBankScraper):
         super().__init__(
             source_name="Berhan Bank",
             base_url="https://berhanbanksc.com",
-            auction_paths=["/notice", "/ማስታወቂያ"]
+            auction_paths=[
+                "/notice",
+                "/ማስታወቂያ",
+                "/auction",
+                "/tender",
+                "/bids",
+                "/foreclosure",
+                "/property-notices",
+                "/news"
+            ]
         )

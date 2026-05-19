@@ -13,5 +13,14 @@ class AmharaBankScraper(KeywordBankScraper):
         super().__init__(
             source_name="Amhara Bank",
             base_url="https://www.amharabank.com.et",
-            auction_paths=["/notice", "/ማስታወቂያ"]
+            auction_paths=[
+                "/notice",
+                "/ማስታወቂያ",
+                "/auction",
+                "/tender",
+                "/bids",
+                "/bids-and-tenders",
+                "/foreclosure-sale",
+                "/ሐራጅ"
+            ]
         )

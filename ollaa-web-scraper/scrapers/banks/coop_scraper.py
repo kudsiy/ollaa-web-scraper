@@ -13,5 +13,15 @@ class CoopBankScraper(KeywordBankScraper):
         super().__init__(
             source_name="Cooperative Bank of Oromia",
             base_url="https://coopbankoromia.com.et",
-            auction_paths=["/notice", "/ማስታወቂያ"]
+            auction_paths=[
+                "/notice",
+                "/ማስታወቂያ",
+                "/auction",
+                "/tender",
+                "/bids",
+                "/foreclosure",
+                "/property-auction",
+                "/news",
+                "/category/auction"
+            ]
         )

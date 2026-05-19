@@ -248,8 +248,13 @@ class PlaywrightScraper(BaseScraper):
         """Fetch a URL using Playwright for JS rendering."""
         page = await self.context.new_page()
         try:
-            await page.goto(url, timeout=self.config.scraper.request_timeout * 1000)
-            await page.wait_for_load_state("networkidle")
+            timeout_ms = self.config.scraper.request_timeout * 1000
+            await page.goto(url, timeout=timeout_ms)
+            try:
+                await page.wait_for_load_state("networkidle", timeout=timeout_ms)
+            except Exception:
+                self.logger.debug(f"networkidle timeout on {url}, continuing with loaded content")
+                pass
             content = await page.content()
             return BeautifulSoup(content, "html.parser")
         except Exception as e:
@@ -257,3 +262,27 @@ class PlaywrightScraper(BaseScraper):
             return None
         finally:
             await page.close()
+
+    def _try_alternate_domains(self, url: str, alt_domains: list = None) -> Optional[BeautifulSoup]:
+        """
+        Try fetching a URL with alternate domains if the primary fails.
+        Handles ERR_NAME_NOT_RESOLVED by trying known working mirrors/alternates.
+        
+        Args:
+            url: The original URL that failed
+            alt_domains: List of (alt_url, alt_name) tuples to try
+            
+        Returns:
+            BeautifulSoup object or None
+        """
+        if not alt_domains:
+            return None
+            
+        for alt_url, alt_name in alt_domains:
+            self.logger.info(f"Trying alternate domain: {alt_name} -> {alt_url}")
+            result = self._fetch_page(alt_url)
+            if result:
+                self.logger.info(f"Alternate domain {alt_name} succeeded")
+                return result
+                
+        return None

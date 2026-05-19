@@ -35,6 +35,7 @@ class BaseTenderScraper(PlaywrightScraper):
         """
         start_time = datetime.utcnow()
         result = ScrapeResult(success=False)
+        timeout_ms = self.config.scraper.request_timeout * 1000
         
         try:
             await self._init_browser()
@@ -42,14 +43,23 @@ class BaseTenderScraper(PlaywrightScraper):
             page = await self.context.new_page()
             
             try:
-                await page.goto(self.base_url, wait_until="networkidle", timeout=60000)
+                await page.goto(self.base_url, wait_until="networkidle", timeout=timeout_ms)
             except Exception as e:
-                self.logger.warning(f"Navigation timeout, trying load event: {e}")
+                error_str = str(e).lower()
+                if "err_name_not_resolved" in error_str or "err_connection" in error_str or "dns" in error_str:
+                    self.logger.warning(f"Domain resolution failed for {self.source_name}: {e}")
+                else:
+                    self.logger.warning(f"Navigation timeout, trying load event: {e}")
                 try:
-                    await page.goto(self.base_url, wait_until="load", timeout=60000)
+                    await page.goto(self.base_url, wait_until="load", timeout=timeout_ms)
                 except Exception as e2:
-                    self.logger.error(f"Failed to load page: {e2}")
-                    result.errors.append(f"Navigation failed: {e2}")
+                    error_str2 = str(e2).lower()
+                    if "err_name_not_resolved" in error_str2 or "err_connection" in error_str2 or "dns" in error_str2:
+                        self.logger.error(f"Domain resolution failed for {self.source_name}: {e2}")
+                        result.errors.append(f"Domain resolution failed - the site may have moved or be temporarily unavailable")
+                    else:
+                        self.logger.error(f"Failed to load page: {e2}")
+                        result.errors.append(f"Navigation failed: {e2}")
                     await page.close()
                     await self._close_browser()
                     result.duration_seconds = (datetime.utcnow() - start_time).total_seconds()
