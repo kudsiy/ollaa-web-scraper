@@ -2,7 +2,7 @@
 BetDelala real estate listing scraper.
 """
 import logging
-from typing import Optional
+from typing import Optional, List
 from scrapers.listings.engocha_scraper import EngochaScraper
 from scrapers.base_scraper import ScrapedListing
 
@@ -16,7 +16,8 @@ class BetDelalaScraper(EngochaScraper):
     base_url = "https://betdelala.com"
     source_name = "BetDelala"
     
-    def _find_listing_pages(self):
+    async def _find_listing_pages(self) -> List[str]:
+        """Find listing pages for BetDelala."""
         return [
             f"{self.base_url}/home-list",
             f"{self.base_url}/home-list?type=sale",

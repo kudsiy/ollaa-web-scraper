@@ -1,7 +1,9 @@
 """
 Ethiopia Realty listing scraper.
+Inherits from EngochaScraper but targets ethiopiarealty.com.
 """
 import logging
+from typing import List
 from scrapers.listings.engocha_scraper import EngochaScraper
 
 logger = logging.getLogger(__name__)
@@ -14,7 +16,8 @@ class EthiopiaRealtyScraper(EngochaScraper):
     base_url = "https://ethiopiarealty.com"
     source_name = "Ethiopia Realty"
     
-    def _find_listing_pages(self):
+    async def _find_listing_pages(self) -> List[str]:
+        """Find listing pages for Ethiopia Realty."""
         return [
             f"{self.base_url}/condominium-for-sale-in-addis-ababa-ethiopia/",
             f"{self.base_url}/houses-for-rent/",

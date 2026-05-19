@@ -26,11 +26,13 @@ jobs:
         run: playwright install chromium --with-deps
 
       - name: Create credentials.json
+        env:
+          CREDS: ${{ secrets.GOOGLE_CREDENTIALS }}
         run: |
           if [ -d ollaa-web-scraper/ollaa-web-scraper ]; then
-            printf '%s' "${{ secrets.GOOGLE_CREDENTIALS }}" > ollaa-web-scraper/ollaa-web-scraper/credentials.json
+            echo "$CREDS" > ollaa-web-scraper/ollaa-web-scraper/credentials.json
           else
-            printf '%s' "${{ secrets.GOOGLE_CREDENTIALS }}" > ollaa-web-scraper/credentials.json
+            echo "$CREDS" > ollaa-web-scraper/credentials.json
           fi
 
       - name: Sync data to Google Sheets
