@@ -6,5 +6,6 @@ venv/
 
 # Runtime artifacts
 ollaa-web-scraper/credentials.json
+ollaa-web-scraper/ollaa-web-scraper/credentials.json
 ollaa-web-scraper/property_data.json
 ollaa-web-scraper/property_data_unified.csv

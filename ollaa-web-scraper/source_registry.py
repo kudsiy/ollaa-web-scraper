@@ -241,6 +241,14 @@ SOURCE_REGISTRY = {
         "scrapability": "medium",
         "status": "verified_working",
     },
+    "dashen": {
+        "name": "Dashen Bank",
+        "url": "https://dashenbanksc.com",
+        "category": "institutional_auctions",
+        "valuation_signal": "primary_auction",
+        "scrapability": "medium",
+        "status": "verified_working",
+    },
     "berhan": {
         "name": "Berhan Bank",
         "url": "https://berhanbanksc.com",

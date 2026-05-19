@@ -2,7 +2,7 @@
 Living Ethio real estate listing scraper.
 """
 import logging
-from typing import Optional
+from typing import Optional, List
 from scrapers.listings.engocha_scraper import EngochaScraper
 from scrapers.base_scraper import ScrapedListing
 
@@ -16,7 +16,8 @@ class LivingEthioScraper(EngochaScraper):
     base_url = "https://livingethio.com"
     source_name = "Living Ethio"
     
-    def _find_listing_pages(self):
+    async def _find_listing_pages(self) -> List[str]:
+        """Find listing pages for Living Ethio."""
         return [
             f"{self.base_url}/properties-2/",
             f"{self.base_url}/property-type/apartment/",

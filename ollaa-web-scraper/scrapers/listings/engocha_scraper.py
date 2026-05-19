@@ -1,15 +1,17 @@
 """
 Engocha real estate listing scraper.
 Scrapes property listings from Ethiopian real estate websites.
+Uses Playwright to handle possible site blocks and JS rendering.
 """
 import logging
 import re
+import asyncio
 from datetime import datetime
 from typing import List, Optional
 
 from bs4 import BeautifulSoup
 
-from scrapers.base_scraper import BaseScraper, ScrapedListing, ScrapeResult
+from scrapers.base_scraper import PlaywrightScraper, ScrapedListing, ScrapeResult
 from parsers.price_extractor import PriceExtractor
 from config import get_config
 
@@ -17,7 +19,7 @@ from config import get_config
 logger = logging.getLogger(__name__)
 
 
-class EngochaScraper(BaseScraper):
+class EngochaScraper(PlaywrightScraper):
     """
     Scraper for Ethiopian real estate listings (Engocha-style sites).
     Target: Real estate listing aggregator sites.
@@ -31,6 +33,10 @@ class EngochaScraper(BaseScraper):
         self.price_extractor = PriceExtractor()
         
     def scrape(self) -> ScrapeResult:
+        """Synchronous wrapper for scrape_async."""
+        return asyncio.run(self.scrape_async())
+        
+    async def scrape_async(self) -> ScrapeResult:
         """
         Main scraping method for Engocha listings.
         
@@ -43,15 +49,16 @@ class EngochaScraper(BaseScraper):
         limit = self.config.scraper.fetch_limit
         
         try:
-            self.logger.info(f"Starting Engocha listing scrape (limit: {limit})")
+            self.logger.info(f"Starting {self.source_name} listing scrape (limit: {limit})")
+            await self._init_browser()
             
-            listing_urls = self._find_listing_pages()
+            listing_urls = await self._find_listing_pages()
             self.logger.info(f"Found {len(listing_urls)} listing pages")
             
             for url in listing_urls:
                 if len(result.listings) >= limit:
                     break
-                listings = self._scrape_listing_page(url)
+                listings = await self._scrape_listing_page(url)
                 result.listings.extend(listings)
                 
             if len(result.listings) > limit:
@@ -61,14 +68,16 @@ class EngochaScraper(BaseScraper):
             result.scraped_count = len(result.listings)
             
         except Exception as e:
-            self.logger.error(f"Error during Engocha scrape: {e}")
+            self.logger.error(f"Error during {self.source_name} scrape: {e}")
             result.errors.append(str(e))
+        finally:
+            await self._close_browser()
             
         result.duration_seconds = (datetime.utcnow() - start_time).total_seconds()
         return result
     
-    def _find_listing_pages(self) -> List[str]:
-        """Find listing pages from Engocha website."""
+    async def _find_listing_pages(self) -> List[str]:
+        """Find listing pages from website."""
         pages = []
         
         # Known working property listing URLs on Engocha
@@ -79,7 +88,7 @@ class EngochaScraper(BaseScraper):
         ]
         
         for url in possible_urls:
-            soup = self.scrape_page(url)
+            soup = await self._fetch_page_js(url)
             if soup:
                 cards = soup.select('.listing-card, .property-card, .listing-item, [class*="listing"], article')
                 if cards:
@@ -88,10 +97,10 @@ class EngochaScraper(BaseScraper):
                 
         return pages if pages else possible_urls[:1]
     
-    def _scrape_listing_page(self, url: str) -> List[ScrapedListing]:
+    async def _scrape_listing_page(self, url: str) -> List[ScrapedListing]:
         """Scrape individual listing page."""
         listings = []
-        soup = self.scrape_page(url)
+        soup = await self._fetch_page_js(url)
         
         if not soup:
             return listings
@@ -108,7 +117,7 @@ class EngochaScraper(BaseScraper):
                 
         pagination = self._get_pagination_pages(soup, url)
         for page_url in pagination[:5]:
-            page_soup = self.scrape_page(page_url)
+            page_soup = await self._fetch_page_js(page_url)
             if page_soup:
                 cards = page_soup.select('.listing-card, .property-card, .listing-item, [class*="listing"]')
                 for card in cards:

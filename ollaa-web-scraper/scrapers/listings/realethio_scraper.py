@@ -1,7 +1,9 @@
 """
 Real Ethio listing scraper.
+Inherits from EngochaScraper but targets realethio.com.
 """
 import logging
+from typing import List
 from scrapers.listings.engocha_scraper import EngochaScraper
 
 logger = logging.getLogger(__name__)
@@ -14,7 +16,8 @@ class RealEthioScraper(EngochaScraper):
     base_url = "https://realethio.com"
     source_name = "Real Ethio"
     
-    def _find_listing_pages(self):
+    async def _find_listing_pages(self) -> List[str]:
+        """Find listing pages for Real Ethio."""
         return [
             f"{self.base_url}/property-type/apartment-for-sale/",
             f"{self.base_url}/property-type/house-for-sale/",

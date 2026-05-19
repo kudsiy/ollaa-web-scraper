@@ -2,7 +2,7 @@
 Ethiopia Property Centre listing scraper.
 """
 import logging
-from typing import Optional
+from typing import Optional, List
 from scrapers.listings.engocha_scraper import EngochaScraper
 from scrapers.base_scraper import ScrapedListing
 
@@ -16,7 +16,8 @@ class EthiopiaPropertyCentreScraper(EngochaScraper):
     base_url = "https://ethiopiapropertycentre.com"
     source_name = "Ethiopia Property Centre"
     
-    def _find_listing_pages(self):
+    async def _find_listing_pages(self) -> List[str]:
+        """Find listing pages for Ethiopia Property Centre."""
         return [
             f"{self.base_url}/for-sale",
             f"{self.base_url}/for-rent",
