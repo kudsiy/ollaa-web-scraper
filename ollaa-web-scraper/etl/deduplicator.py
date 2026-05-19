@@ -60,6 +60,8 @@ class Deduplicator:
     def deduplicate(self, listings: List[Dict[str, Any]]) -> tuple:
         """
         Deduplicate a list of normalized listings.
+        Only removes exact duplicates (by hash or URL) to avoid being too aggressive.
+        Similar listings from different sources are allowed to persist.
         
         Args:
             listings: List of normalized listing dictionaries
@@ -76,6 +78,7 @@ class Deduplicator:
             
             is_duplicate = False
             
+            # Only flag as duplicate if we have an exact hash match or exact URL match
             if content_hash and content_hash in self._hash_cache:
                 is_duplicate = True
                 logger.debug(f"Duplicate hash: {content_hash[:16]}...")
@@ -84,9 +87,11 @@ class Deduplicator:
                 is_duplicate = True
                 logger.debug(f"Duplicate URL: {source_url}")
                 
-            elif self._fuzzy_match(listing, unique):
+            # Skip aggressive fuzzy matching for cross-source deduplication
+            # Only apply fuzzy matching within the same source for near-duplicate listings
+            elif self._fuzzy_match_within_source(listing, unique):
                 is_duplicate = True
-                logger.debug(f"Fuzzy match detected")
+                logger.debug(f"Fuzzy match detected within same source")
                 
             if is_duplicate:
                 duplicates += 1
@@ -99,9 +104,10 @@ class Deduplicator:
                 
         return (unique, duplicates)
     
-    def _fuzzy_match(self, listing: Dict[str, Any], existing: List[Dict[str, Any]]) -> bool:
+    def _fuzzy_match_within_source(self, listing: Dict[str, Any], existing: List[Dict[str, Any]]) -> bool:
         """
-        Perform fuzzy matching to detect near-duplicates.
+        Perform fuzzy matching to detect near-duplicates ONLY within the same source.
+        Different sources can have similar listings about the same property.
         
         Args:
             listing: Listing to check
@@ -110,37 +116,32 @@ class Deduplicator:
         Returns:
             True if duplicate detected
         """
-        threshold = 0.85
+        threshold = 0.95  # Much higher threshold - practically identical
         
         title = (listing.get("title", "") or "").lower().strip()
-        location = (listing.get("location", "") or "").lower().strip()
-        price = listing.get("price")
-        area = listing.get("area_sqm")
+        source_name = listing.get("source_name")
+        
+        if not title or not source_name:
+            return False
         
         for exist_listing in existing:
-            if listing.get("source_name") != exist_listing.get("source_name"):
+            # Only compare listings from the exact same source
+            if exist_listing.get("source_name") != source_name:
                 continue
                 
             exist_title = (exist_listing.get("title", "") or "").lower().strip()
-            exist_location = (exist_listing.get("location", "") or "").lower().strip()
-            exist_price = exist_listing.get("price")
-            exist_area = exist_listing.get("area_sqm")
             
-            title_similarity = self._string_similarity(title, exist_title)
-            location_similarity = self._string_similarity(location, exist_location)
-            
-            price_match = True
-            if price and exist_price:
-                price_match = abs(price - exist_price) / max(price, exist_price) < 0.1
-            
-            area_match = True
-            if area and exist_area:
-                area_match = abs(area - exist_area) / max(area, exist_area) < 0.05
-
-            if title_similarity > threshold and location_similarity > threshold and price_match and area_match:
+            # Only flag as duplicate if titles are virtually identical
+            if self._string_similarity(title, exist_title) > threshold:
                 return True
                 
         return False
+    
+    def _fuzzy_match(self, listing: Dict[str, Any], existing: List[Dict[str, Any]]) -> bool:
+        """
+        Legacy fuzzy matching - kept for backward compatibility but no longer used by default.
+        """
+        return self._fuzzy_match_within_source(listing, existing)
     
     def _string_similarity(self, s1: str, s2: str) -> float:
         """

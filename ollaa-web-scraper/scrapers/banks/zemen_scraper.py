@@ -13,5 +13,14 @@ class ZemenBankScraper(KeywordBankScraper):
         super().__init__(
             source_name="Zemen Bank",
             base_url="https://www.zemenbank.com",
-            auction_paths=["/notice", "/ማስታወቂያ"]
+            auction_paths=[
+                "/notice",
+                "/ማስታወቂያ",
+                "/auction",
+                "/tender",
+                "/foreclosure",
+                "/property-auction",
+                "/bids",
+                "/news"
+            ]
         )

@@ -26,7 +26,7 @@ class ScraperConfig:
     """Scraper behavior configuration."""
     request_delay_min: float = 2.0
     request_delay_max: float = 5.0
-    request_timeout: int = 30
+    request_timeout: int = 90
     max_retries: int = 3
     retry_delay: float = 5.0
     user_agent: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
