@@ -32,7 +32,7 @@ class ScraperConfig:
     user_agent: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
     batch_size: int = 100
     fetch_limit: int = 1000
-    start_date: str = "2025-01-01"
+    start_date: str = "2024-01-01"
 
 
 @dataclass
@@ -59,7 +59,7 @@ class GoogleSheetsConfig:
     enabled: bool = os.getenv("GOOGLE_SHEETS_ENABLED", "false").lower() == "true"
     spreadsheet_id: str = os.getenv("GOOGLE_SHEETS_SPREADSHEET_ID", "")
     credentials_file: str = os.getenv("GOOGLE_SHEETS_CREDENTIALS_FILE", "credentials.json")
-    sheet_name: str = os.getenv("GOOGLE_SHEETS_SHEET_NAME", "Property Data")
+    sheet_name: str = os.getenv("GOOGLE_SHEETS_SHEET_NAME", "Sheet1")
 
 
 @dataclass

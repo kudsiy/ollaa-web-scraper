@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# Runtime artifacts
+ollaa-web-scraper/credentials.json
+ollaa-web-scraper/property_data.json
+ollaa-web-scraper/property_data_unified.csv

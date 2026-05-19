@@ -23,13 +23,15 @@ jobs:
           pip install -r requirements.txt
 
       - name: Install Playwright browsers
-        run: playwright install --with-deps
+        run: playwright install chromium --with-deps
 
       - name: Create credentials.json
         run: |
-          cat <<EOF > ollaa-web-scraper/credentials.json
-          ${{ secrets.GOOGLE_CREDENTIALS }}
-          EOF
+          if [ -d ollaa-web-scraper/ollaa-web-scraper ]; then
+            printf '%s' "${{ secrets.GOOGLE_CREDENTIALS }}" > ollaa-web-scraper/ollaa-web-scraper/credentials.json
+          else
+            printf '%s' "${{ secrets.GOOGLE_CREDENTIALS }}" > ollaa-web-scraper/credentials.json
+          fi
 
       - name: Sync data to Google Sheets
         env:
@@ -37,10 +39,16 @@ jobs:
           GOOGLE_SHEETS_SPREADSHEET_ID: "14kN2IShbo2D9f3L-ZXO9mMaKaBvO589kHnFRwcPeSOg"
           PYTHONPATH: ${{ github.workspace }}/ollaa-web-scraper
         run: |
-          cd ollaa-web-scraper
+          if [ -d ollaa-web-scraper/ollaa-web-scraper ]; then
+            cd ollaa-web-scraper/ollaa-web-scraper
+          else
+            cd ollaa-web-scraper
+          fi
           python etl/json_exporter.py
           python etl/sheets_uploader.py
 
       - name: Cleanup credentials
         if: always()
-        run: rm -f ollaa-web-scraper/credentials.json
+        run: |
+          rm -f ollaa-web-scraper/credentials.json
+          rm -f ollaa-web-scraper/ollaa-web-scraper/credentials.json
