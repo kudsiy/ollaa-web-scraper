@@ -62,17 +62,20 @@ class SheetsUploader:
 
         try:
             self.spreadsheet = self.client.open_by_key(self.config.spreadsheet_id)
+            sheet_name = self.config.sheet_name
+            if not sheet_name or sheet_name == "Property Data":
+                sheet_name = "Sheet1"
             try:
-                self.worksheet = self.spreadsheet.worksheet(self.config.sheet_name)
+                self.worksheet = self.spreadsheet.worksheet(sheet_name)
             except gspread.exceptions.WorksheetNotFound:
-                logger.info(f"Worksheet '{self.config.sheet_name}' not found. Creating it.")
-                self.worksheet = self.spreadsheet.add_worksheet(title=self.config.sheet_name, rows="100", cols="57")
-            
+                logger.info(f"Worksheet '{sheet_name}' not found. Creating it.")
+                self.worksheet = self.spreadsheet.add_worksheet(title=sheet_name, rows="100", cols="57")
+
             # Check if sheet is empty and needs headers
             if not self.worksheet.get_all_values():
                 logger.info("Sheet is empty. Adding headers.")
                 self.worksheet.append_row(UNIFIED_SCHEMA)
-            
+
             return self.worksheet
         except Exception as e:
             logger.error(f"Failed to access Google Sheet: {e}")

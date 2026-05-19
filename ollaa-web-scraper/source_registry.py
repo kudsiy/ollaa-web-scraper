@@ -130,7 +130,7 @@ SOURCE_REGISTRY = {
         "category": "market_listings",
         "valuation_signal": "market_price",
         "scrapability": "high",
-        "status": "requires_js",
+        "status": "verified_working",
         "valuation_worthy": True,
     },
 
@@ -173,7 +173,7 @@ SOURCE_REGISTRY = {
         "category": "auction_aggregators",
         "valuation_signal": "liquidation_value",
         "scrapability": "low",
-        "status": "broken",
+        "status": "verified_working",
     },
     "auctionethiopia": {
         "name": "Auction Ethiopia",
@@ -231,7 +231,7 @@ SOURCE_REGISTRY = {
         "category": "institutional_auctions",
         "valuation_signal": "primary_auction",
         "scrapability": "high",
-        "status": "broken",
+        "status": "verified_working",
     },
     "awash": {
         "name": "Awash Bank",
