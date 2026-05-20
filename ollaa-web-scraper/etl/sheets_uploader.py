@@ -85,13 +85,28 @@ class SheetsUploader:
             return None
 
     def _ensure_headers(self):
-        """Ensure row 1 contains the correct UNIFIED_SCHEMA headers."""
+        """Ensure row 1 contains the correct UNIFIED_SCHEMA headers.
+        Uses prefix-based comparison: if the first N columns of the existing
+        headers match the schema, assume headers are correct to avoid rewriting.
+        """
         try:
             existing_headers = self.worksheet.row_values(1)
         except Exception:
             existing_headers = []
 
-        if existing_headers == UNIFIED_SCHEMA:
+        # Check if the first few columns match the schema (prefix-based check)
+        # This avoids rewriting headers if the sheet has extra trailing columns
+        prefix_match = True
+        check_count = min(len(existing_headers), 5)  # check first 5 columns
+        if check_count > 0:
+            for i in range(check_count):
+                if existing_headers[i] != UNIFIED_SCHEMA[i]:
+                    prefix_match = False
+                    break
+        else:
+            prefix_match = False
+
+        if prefix_match and len(existing_headers) >= 57:
             return
 
         logger.info("Headers are missing or incorrect. Updating headers.")
@@ -178,4 +193,4 @@ if __name__ == "__main__":
         except Exception as e:
             logger.error(f"Error during standalone upload: {e}")
     else:
-        logger.error(f"JSON file {json_file} not found. Run json_exporter.py first.")
+        logger.error(f"JSON file {json_file} not found. Run unified_exporter.py first.")

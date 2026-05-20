@@ -9,6 +9,7 @@ from typing import Optional, Dict, Any
 
 from config import get_config
 from parsers.semantic_engine import SemanticProcessingEngine
+from etl.deduplicator import Deduplicator
 
 
 logger = logging.getLogger(__name__)
@@ -87,7 +88,25 @@ class Normalizer:
             "floor_level": semantic_results.get("floor_level"),
             "total_floors": semantic_results.get("total_floors"),
             "valuation_eligible": semantic_results.get("valuation_eligible", False),
-            "content_hash": self._generate_hash(listing),
+            "content_hash": Deduplicator.generate_hash({
+                "source_name": listing.source_name,
+                "source_key": getattr(listing, 'source_key', None),
+                "source_url": listing.source_url,
+                "title": listing.title,
+                "description": listing.description,
+                "price": listing.price,
+                "price_currency": listing.price_currency,
+                "location": listing.location,
+                "property_type": listing.property_type,
+                "property_subtype": semantic_results.get("property_subtype"),
+                "listing_type": listing.listing_type,
+                "area_sqm": listing.area_sqm,
+                "bedrooms": listing.bedrooms,
+                "bathrooms": listing.bathrooms,
+                "floor_level": semantic_results.get("floor_level"),
+                "developer": semantic_results.get("developer"),
+                "external_id": getattr(listing, 'external_id', None),
+            }),
             "scraped_at": datetime.utcnow(),
             "raw_data": merged_raw_data,
         }
@@ -310,22 +329,6 @@ class Normalizer:
                     return standard_type
                     
         return "sale"
-    
-    def _generate_hash(self, listing) -> str:
-        """Generate content hash for deduplication using multiple fields."""
-        import hashlib
-        
-        content = (
-            f"{listing.source_name or ''}|"
-            f"{listing.title or ''}|"
-            f"{listing.price or ''}|"
-            f"{listing.location or ''}|"
-            f"{listing.property_type or ''}|"
-            f"{listing.area_sqm or ''}|"
-            f"{listing.bedrooms or ''}"
-        )
-        
-        return hashlib.sha256(content.encode()).hexdigest()
     
     def _normalize_raw_data(self, raw_data: Dict) -> Dict:
         """Normalize raw data for storage."""
