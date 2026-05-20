@@ -238,16 +238,31 @@ class Deduplicator:
         to reduce aggressive deduplication across similar-but-distinct records.
         """
         hash_fields = [
-            "source_name", "source_key", "source_url", "external_id",
+            # Identity fields
+            "id", "source_name", "source_key", "source_url", "external_id",
             "title", "description",
-            "price", "price_currency", "price_period", "price_type",
+            
+            # Pricing fields (include both price_currency and currency for schema compatibility)
+            "price", "price_currency", "currency", "price_period", "price_type", "price_per_sqm",
             "listing_type", "listing_class",
             "property_type", "property_subtype",
+            
+            # Location fields
             "location", "refined_location", "region", "city", "subcity", "woreda", "neighborhood",
+            "address_raw", "site_name", "building_name",
+            
+            # Size fields
             "area_sqm", "area_type", "bedrooms", "bathrooms", "kitchens", "parking_spaces",
-            "floor_level", "total_floors", "finish_state", "construction_status",
+            "balcony_count",
+            
+            # Property attributes
+            "floor_level", "total_floors", "finish_state", "construction_status", "year_built",
+            "water_supply", "electricity", "security_features",
+            
+            # Financial fields
             "developer", "posted_date", "closing_date",
             "bank_loan_pct", "down_payment", "installment_years", "remaining_debt", "valuation_eligible",
+            "price_negotiable",
         ]
 
         parts = []
