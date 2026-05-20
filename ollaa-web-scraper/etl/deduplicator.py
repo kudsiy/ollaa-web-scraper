@@ -214,33 +214,49 @@ class Deduplicator:
         return 1 - (distance / max_len)
     
     @staticmethod
+    def _normalize_hash_value(value: Any) -> str:
+        """Normalize values before hash composition for consistent hashing."""
+        if value is None:
+            return ""
+
+        if isinstance(value, datetime):
+            return value.isoformat()
+
+        if isinstance(value, bool):
+            return "true" if value else "false"
+
+        if isinstance(value, (int, float)):
+            return str(value)
+
+        return (str(value) or "").strip().lower()
+
+    @staticmethod
     def generate_hash(listing: Dict[str, Any]) -> str:
         """
-        Generate content hash for a listing using all key fields.
-        Ensures uniqueness across the 57-column schema.
-        This is the centralized hash function used by Normalizer and Deduplicator.
+        Generate a precise content hash for a listing.
+        Includes identity, pricing, location, classification, and size fields
+        to reduce aggressive deduplication across similar-but-distinct records.
         """
-        content = (
-            f"{listing.get('source_name', '')}|"
-            f"{listing.get('source_key', '')}|"
-            f"{listing.get('source_url', '')}|"
-            f"{listing.get('title', '')}|"
-            f"{listing.get('description', '')[:200]}|"
-            f"{listing.get('price', '')}|"
-            f"{listing.get('price_currency', '')}|"
-            f"{listing.get('location', '')}|"
-            f"{listing.get('property_type', '')}|"
-            f"{listing.get('property_subtype', '')}|"
-            f"{listing.get('listing_type', '')}|"
-            f"{listing.get('area_sqm', '')}|"
-            f"{listing.get('bedrooms', '')}|"
-            f"{listing.get('bathrooms', '')}|"
-            f"{listing.get('floor_level', '')}|"
-            f"{listing.get('developer', '')}|"
-            f"{listing.get('external_id', '')}"
-        )
-        
-        return hashlib.sha256(content.encode()).hexdigest()
+        hash_fields = [
+            "source_name", "source_key", "source_url", "external_id",
+            "title", "description",
+            "price", "price_currency", "price_period", "price_type",
+            "listing_type", "listing_class",
+            "property_type", "property_subtype",
+            "location", "refined_location", "region", "city", "subcity", "woreda", "neighborhood",
+            "area_sqm", "area_type", "bedrooms", "bathrooms", "kitchens", "parking_spaces",
+            "floor_level", "total_floors", "finish_state", "construction_status",
+            "developer", "posted_date", "closing_date",
+            "bank_loan_pct", "down_payment", "installment_years", "remaining_debt", "valuation_eligible",
+        ]
+
+        parts = []
+        for field in hash_fields:
+            value = Deduplicator._normalize_hash_value(listing.get(field))
+            parts.append(f"{field}:{value}")
+
+        content = "|".join(parts)
+        return hashlib.sha256(content.encode("utf-8")).hexdigest()
     
     def add_to_cache(self, listing: Dict[str, Any]) -> None:
         """
