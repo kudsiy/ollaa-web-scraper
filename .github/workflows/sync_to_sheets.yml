@@ -46,8 +46,7 @@ jobs:
           else
             cd ollaa-web-scraper
           fi
-          python etl/json_exporter.py
-          python etl/sheets_uploader.py
+          python etl/unified_exporter.py
 
       - name: Cleanup credentials
         if: always()

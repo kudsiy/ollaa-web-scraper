@@ -48,6 +48,7 @@ class SheetsExporter:
         """
         Map normalized data to the 57-column schema.
         Extracts nested information from raw_data if necessary.
+        Ensures all 57 columns are present, filling missing values with None.
         """
         raw_data = normalized_data.get("raw_data", {})
         if isinstance(raw_data, str):
@@ -63,7 +64,7 @@ class SheetsExporter:
             "source_key": normalized_data.get("source_key") or raw_data.get("source_key") or normalized_data.get("source_name", "").lower().replace(" ", ""),
             "source_name": normalized_data.get("source_name"),
             "source_url": normalized_data.get("source_url"),
-            "external_id": raw_data.get("message_id") or raw_data.get("id") or raw_data.get("external_id"),
+            "external_id": raw_data.get("message_id") or raw_data.get("id") or raw_data.get("external_id") or normalized_data.get("external_id"),
             "title": normalized_data.get("title"),
             "description": normalized_data.get("description"),
             "property_type": normalized_data.get("property_type"),
@@ -133,10 +134,14 @@ class SheetsExporter:
             "content_hash": normalized_data.get("content_hash"),
         })
         
-        # Ensure all columns are present in the correct order
+        # Ensure all 57 columns are present in the correct order (strict mapping)
         result = {}
         for col in self.schema:
-            result[col] = formatted.get(col)
+            val = formatted.get(col)
+            # Convert complex types to string representation to avoid CSV/sheets issues
+            if isinstance(val, (list, dict)) and col == "raw_data":
+                val = None  # raw_data is never a column in the schema
+            result[col] = val
             
         return result
 

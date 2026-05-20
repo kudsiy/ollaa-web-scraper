@@ -60,7 +60,7 @@ class Deduplicator:
     def deduplicate(self, listings: List[Dict[str, Any]]) -> tuple:
         """
         Deduplicate a list of normalized listings.
-        Only removes exact duplicates (by hash or URL) to avoid being too aggressive.
+        Uses content hash (including many fields) and URL matching.
         Similar listings from different sources are allowed to persist.
         
         Args:
@@ -74,11 +74,16 @@ class Deduplicator:
         
         for listing in listings:
             content_hash = listing.get("content_hash")
+            # Generate hash if not present (using centralized method)
+            if not content_hash:
+                content_hash = self.generate_hash(listing)
+                listing["content_hash"] = content_hash
+            
             source_url = listing.get("source_url")
             
             is_duplicate = False
             
-            # Only flag as duplicate if we have an exact hash match or exact URL match
+            # Exact hash match (includes many fields now, so very precise)
             if content_hash and content_hash in self._hash_cache:
                 is_duplicate = True
                 logger.debug(f"Duplicate hash: {content_hash[:16]}...")
@@ -87,7 +92,6 @@ class Deduplicator:
                 is_duplicate = True
                 logger.debug(f"Duplicate URL: {source_url}")
                 
-            # Skip aggressive fuzzy matching for cross-source deduplication
             # Only apply fuzzy matching within the same source for near-duplicate listings
             elif self._fuzzy_match_within_source(listing, unique):
                 is_duplicate = True
@@ -209,21 +213,31 @@ class Deduplicator:
         
         return 1 - (distance / max_len)
     
-    def generate_hash(self, listing: Dict[str, Any]) -> str:
+    @staticmethod
+    def generate_hash(listing: Dict[str, Any]) -> str:
         """
-        Generate content hash for a listing using multiple fields.
+        Generate content hash for a listing using all key fields.
         Ensures uniqueness across the 57-column schema.
+        This is the centralized hash function used by Normalizer and Deduplicator.
         """
         content = (
             f"{listing.get('source_name', '')}|"
+            f"{listing.get('source_key', '')}|"
+            f"{listing.get('source_url', '')}|"
             f"{listing.get('title', '')}|"
+            f"{listing.get('description', '')[:200]}|"
             f"{listing.get('price', '')}|"
+            f"{listing.get('price_currency', '')}|"
             f"{listing.get('location', '')}|"
             f"{listing.get('property_type', '')}|"
+            f"{listing.get('property_subtype', '')}|"
+            f"{listing.get('listing_type', '')}|"
             f"{listing.get('area_sqm', '')}|"
             f"{listing.get('bedrooms', '')}|"
+            f"{listing.get('bathrooms', '')}|"
             f"{listing.get('floor_level', '')}|"
-            f"{listing.get('developer', '')}"
+            f"{listing.get('developer', '')}|"
+            f"{listing.get('external_id', '')}"
         )
         
         return hashlib.sha256(content.encode()).hexdigest()
