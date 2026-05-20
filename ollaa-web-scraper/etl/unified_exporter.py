@@ -94,51 +94,65 @@ async def run_exporter_async():
     verified_sources = [k for k, v in SOURCE_REGISTRY.items() if v.get("status") in ["verified_working", "requires_js"]]
     
     logger.info(f"Starting unified export for {len(verified_sources)} verified sources. Limit: {fetch_limit}, Start Date: {start_date_str}")
-    
-    for source_key in verified_sources:
+
+    semaphore = asyncio.Semaphore(3)  # Run 3 scrapers concurrently to avoid resource exhaustion
+
+    async def scrape_source(source_key):
         if len(all_normalized_listings) >= fetch_limit:
-            logger.info(f"Fetch limit reached ({fetch_limit}). Stopping.")
-            break
-        
+            return []
+
         if source_key not in scraper_instances:
             logger.warning(f"No scraper implementation found for verified source: {source_key}")
-            continue
-            
-        logger.info(f"Running scraper: {source_key}")
-        scraper = scraper_instances[source_key]
-        
-        try:
-            # Check if it's an async scraper
-            if hasattr(scraper, 'scrape_async'):
-                result = await scraper.scrape_async()
-            else:
-                # Run sync scraper in executor to not block event loop
-                loop = asyncio.get_event_loop()
-                result = await loop.run_in_executor(None, scraper.scrape)
-                
-            if result.success:
-                logger.info(f"Successfully scraped {len(result.listings)} listings from {source_key}")
-                for listing in result.listings:
-                    if len(all_normalized_listings) >= fetch_limit:
-                        break
+            return []
 
-                    # Inject source_key into listing for normalizer to pick up
-                    listing.source_key = source_key
+        async with semaphore:
+            logger.info(f"Running scraper: {source_key}")
+            scraper = scraper_instances[source_key]
 
-                    # Normalize listing
-                    normalized = normalizer.normalize_listing(listing)
+            try:
+                # Check if it's an async scraper
+                if hasattr(scraper, 'scrape_async'):
+                    result = await scraper.scrape_async()
+                else:
+                    # Run sync scraper in executor to not block event loop
+                    loop = asyncio.get_event_loop()
+                    result = await loop.run_in_executor(None, scraper.scrape)
 
-                    # Date filtering
-                    posted_date = normalized.get("posted_date")
-                    if posted_date and posted_date < start_date:
-                        continue
+                source_listings = []
+                if result.success:
+                    logger.info(f"Successfully scraped {len(result.listings)} listings from {source_key}")
+                    for listing in result.listings:
+                        # Inject source_key into listing for normalizer to pick up
+                        listing.source_key = source_key
 
-                    normalized["source_key"] = source_key
-                    all_normalized_listings.append(normalized)
-            else:
-                logger.error(f"Scraper {source_key} failed: {result.errors}")
-        except Exception as e:
-            logger.exception(f"Unexpected error running scraper {source_key}: {e}")
+                        # Normalize listing
+                        normalized = normalizer.normalize_listing(listing)
+
+                        # Date filtering
+                        posted_date = normalized.get("posted_date")
+                        if posted_date and posted_date < start_date:
+                            continue
+
+                        normalized["source_key"] = source_key
+                        source_listings.append(normalized)
+                    return source_listings
+                else:
+                    logger.error(f"Scraper {source_key} failed: {result.errors}")
+                    return []
+            except Exception as e:
+                logger.exception(f"Unexpected error running scraper {source_key}: {e}")
+                return []
+
+    # Run all scrapers concurrently with semaphore
+    tasks = [scrape_source(sk) for sk in verified_sources]
+    results = await asyncio.gather(*tasks)
+
+    # Flatten results
+    for source_listings in results:
+        all_normalized_listings.extend(source_listings)
+        if len(all_normalized_listings) >= fetch_limit:
+            all_normalized_listings = all_normalized_listings[:fetch_limit]
+            break
 
     # Deduplication
     logger.info(f"Performing deduplication on {len(all_normalized_listings)} listings")

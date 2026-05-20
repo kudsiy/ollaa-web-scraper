@@ -70,6 +70,8 @@ class Deduplicator:
             Tuple of (unique_listings, duplicate_count)
         """
         unique = []
+        # Optimization: Group unique listings by source to speed up fuzzy matching
+        unique_by_source: Dict[str, List[Dict[str, Any]]] = {}
         duplicates = 0
         
         for listing in listings:
@@ -80,27 +82,33 @@ class Deduplicator:
                 listing["content_hash"] = content_hash
             
             source_url = listing.get("source_url")
+            source_name = listing.get("source_name", "Unknown")
+            
+            if source_name not in unique_by_source:
+                unique_by_source[source_name] = []
             
             is_duplicate = False
             
-            # Exact hash match (includes many fields now, so very precise)
+            # 1. Exact hash match
             if content_hash and content_hash in self._hash_cache:
                 is_duplicate = True
                 logger.debug(f"Duplicate hash: {content_hash[:16]}...")
                 
+            # 2. URL match
             elif source_url and source_url in self._seen_urls:
                 is_duplicate = True
                 logger.debug(f"Duplicate URL: {source_url}")
                 
-            # Only apply fuzzy matching within the same source for near-duplicate listings
-            elif self._fuzzy_match_within_source(listing, unique):
+            # 3. Fuzzy match WITHIN THE SAME SOURCE ONLY
+            elif self._fuzzy_match_within_source(listing, unique_by_source[source_name]):
                 is_duplicate = True
-                logger.debug(f"Fuzzy match detected within same source")
+                logger.debug(f"Fuzzy match detected within source: {source_name}")
                 
             if is_duplicate:
                 duplicates += 1
             else:
                 unique.append(listing)
+                unique_by_source[source_name].append(listing)
                 if content_hash:
                     self._hash_cache.add(content_hash)
                 if source_url:

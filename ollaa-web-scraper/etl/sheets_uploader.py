@@ -87,17 +87,18 @@ class SheetsUploader:
     def _ensure_headers(self):
         """Ensure row 1 contains the exact 57-column UNIFIED_SCHEMA headers."""
         try:
+            # Force refresh to ensure we have latest headers
             existing_headers = self.worksheet.row_values(1)
         except Exception:
             existing_headers = []
 
-        is_exact_match = len(existing_headers) == 57 and existing_headers == list(UNIFIED_SCHEMA)
-        if is_exact_match:
-            return
-
-        logger.info("Headers are missing or incorrect. Updating headers.")
-        self.worksheet.update('A1:BE1', [UNIFIED_SCHEMA], value_input_option='RAW')
-        logger.info("Headers updated successfully.")
+        # Force match check: if length or content doesn't match UNIFIED_SCHEMA
+        if len(existing_headers) != 57 or existing_headers != list(UNIFIED_SCHEMA):
+            logger.info(f"Headers do not match UNIFIED_SCHEMA (found {len(existing_headers)} cols). Overwriting immediately.")
+            self.worksheet.update('A1:BE1', [UNIFIED_SCHEMA], value_input_option='RAW')
+            logger.info("Headers updated successfully.")
+        else:
+            logger.debug("Headers verified and match UNIFIED_SCHEMA.")
 
     def upload_listings(self, listings: List[Dict[str, Any]]) -> bool:
         """
@@ -146,8 +147,17 @@ class SheetsUploader:
                 row = [listing.get(col) for col in UNIFIED_SCHEMA]
                 rows_to_append.append(row)
 
-            # Use RAW input option to prevent Google Sheets from interpreting values as formulas
-            worksheet.append_rows(rows_to_append, value_input_option='RAW')
+            # Logic to find the first empty row in Column A to prevent auto-formatting/indenting
+            # Replacement for worksheet.append_rows
+            col_a = worksheet.col_values(1)
+            first_empty_row = len(col_a) + 1
+            
+            # Calculate range: A{row}:BE{row+N}
+            last_row = first_empty_row + len(rows_to_append) - 1
+            range_label = f"A{first_empty_row}:BE{last_row}"
+            
+            logger.info(f"Updating range {range_label} with {len(rows_to_append)} rows using RAW input")
+            worksheet.update(range_label, rows_to_append, value_input_option='RAW')
             logger.info(f"Successfully uploaded {len(rows_to_append)} rows to Google Sheet.")
             return True
         except Exception as e:
