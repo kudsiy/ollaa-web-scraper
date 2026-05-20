@@ -55,32 +55,91 @@ class Normalizer:
         if hasattr(listing, 'source_key'):
             merged_raw_data["source_key"] = listing.source_key
 
+        normalized_source_url = self._normalize_url(listing.source_url)
+        normalized_source_name = self._normalize_text(listing.source_name)
+        normalized_title = self._normalize_text(listing.title)
+        normalized_description = self._normalize_text(listing.description)
+        normalized_price = semantic_results.get("price") or self._normalize_price(listing.price)
+        normalized_currency = semantic_results.get("currency") or self._normalize_currency(listing.price_currency)
+        normalized_property_type = semantic_results.get("property_type") or self._normalize_property_type(listing.property_type)
+        normalized_property_subtype = semantic_results.get("property_subtype")
+        normalized_refined_location = semantic_results.get("refined_location")
+        normalized_location = normalized_refined_location or self._normalize_location(listing.location)
+        normalized_area_sqm = semantic_results.get("area_sqm") or self._normalize_area(listing.area_sqm)
+        normalized_bedrooms = semantic_results.get("bedrooms") or self._normalize_integer(listing.bedrooms)
+        normalized_bathrooms = semantic_results.get("bathrooms") or self._normalize_integer(listing.bathrooms)
+        normalized_listing_type = (semantic_results.get("intent", "") or "").lower() or self._normalize_listing_type(listing.listing_type)
+        normalized_posted_date = self._normalize_date(listing.posted_date)
+        normalized_closing_date = self._normalize_date(listing.closing_date)
+
+        hash_payload = {
+            "source_name": normalized_source_name,
+            "source_key": getattr(listing, 'source_key', None),
+            "source_url": normalized_source_url,
+            "external_id": getattr(listing, 'external_id', None) or merged_raw_data.get("external_id") or merged_raw_data.get("id") or merged_raw_data.get("message_id"),
+            "title": normalized_title,
+            "description": normalized_description,
+            "price": normalized_price,
+            "price_currency": normalized_currency,
+            "price_period": merged_raw_data.get("price_period"),
+            "price_type": merged_raw_data.get("price_type"),
+            "listing_type": normalized_listing_type,
+            "listing_class": semantic_results.get("listing_class"),
+            "property_type": normalized_property_type,
+            "property_subtype": normalized_property_subtype,
+            "location": normalized_location,
+            "refined_location": normalized_refined_location,
+            "region": semantic_results.get("region") or merged_raw_data.get("region"),
+            "city": semantic_results.get("city") or merged_raw_data.get("city"),
+            "subcity": semantic_results.get("subcity") or merged_raw_data.get("subcity"),
+            "woreda": merged_raw_data.get("woreda"),
+            "neighborhood": merged_raw_data.get("neighborhood"),
+            "area_sqm": normalized_area_sqm,
+            "area_type": semantic_results.get("area_type"),
+            "bedrooms": normalized_bedrooms,
+            "bathrooms": normalized_bathrooms,
+            "kitchens": semantic_results.get("kitchens"),
+            "parking_spaces": semantic_results.get("parking_spaces") or merged_raw_data.get("parking_spaces"),
+            "floor_level": semantic_results.get("floor_level"),
+            "total_floors": semantic_results.get("total_floors") or merged_raw_data.get("total_floors"),
+            "finish_state": semantic_results.get("finish_state"),
+            "construction_status": merged_raw_data.get("construction_status"),
+            "developer": semantic_results.get("developer"),
+            "posted_date": normalized_posted_date,
+            "closing_date": normalized_closing_date,
+            "bank_loan_pct": merged_raw_data.get("bank_loan_pct"),
+            "down_payment": merged_raw_data.get("down_payment"),
+            "installment_years": merged_raw_data.get("installment_years"),
+            "remaining_debt": merged_raw_data.get("remaining_debt"),
+            "valuation_eligible": semantic_results.get("valuation_eligible", False),
+        }
+
         normalized = {
-            "source_url": self._normalize_url(listing.source_url),
-            "source_name": self._normalize_text(listing.source_name),
-            "title": self._normalize_text(listing.title),
-            "description": self._normalize_text(listing.description),
-            "price": semantic_results.get("price") or self._normalize_price(listing.price),
-            "price_currency": semantic_results.get("currency") or self._normalize_currency(listing.price_currency),
-            "property_type": semantic_results.get("property_type") or self._normalize_property_type(listing.property_type),
-            "property_subtype": semantic_results.get("property_subtype"),
-            "location": semantic_results.get("refined_location") or self._normalize_location(listing.location),
-            "refined_location": semantic_results.get("refined_location"),
+            "source_url": normalized_source_url,
+            "source_name": normalized_source_name,
+            "title": normalized_title,
+            "description": normalized_description,
+            "price": normalized_price,
+            "price_currency": normalized_currency,
+            "property_type": normalized_property_type,
+            "property_subtype": normalized_property_subtype,
+            "location": normalized_location,
+            "refined_location": normalized_refined_location,
             "region": semantic_results.get("region"),
             "city": semantic_results.get("city"),
             "subcity": semantic_results.get("subcity"),
-            "area_sqm": semantic_results.get("area_sqm") or self._normalize_area(listing.area_sqm),
+            "area_sqm": normalized_area_sqm,
             "area_type": semantic_results.get("area_type"),
-            "bedrooms": semantic_results.get("bedrooms") or self._normalize_integer(listing.bedrooms),
-            "bathrooms": semantic_results.get("bathrooms") or self._normalize_integer(listing.bathrooms),
+            "bedrooms": normalized_bedrooms,
+            "bathrooms": normalized_bathrooms,
             "kitchens": semantic_results.get("kitchens"),
             "parking_spaces": semantic_results.get("parking_spaces"),
             "water_supply": semantic_results.get("water_supply"),
             "electricity": semantic_results.get("electricity"),
             "images": self._normalize_images(listing.images),
-            "posted_date": self._normalize_date(listing.posted_date),
-            "closing_date": self._normalize_date(listing.closing_date),
-            "listing_type": (semantic_results.get("intent", "") or "").lower() or self._normalize_listing_type(listing.listing_type),
+            "posted_date": normalized_posted_date,
+            "closing_date": normalized_closing_date,
+            "listing_type": normalized_listing_type,
             "listing_class": semantic_results.get("listing_class"),
             "developer": semantic_results.get("developer"),
             "finish_state": semantic_results.get("finish_state"),
@@ -88,25 +147,7 @@ class Normalizer:
             "floor_level": semantic_results.get("floor_level"),
             "total_floors": semantic_results.get("total_floors"),
             "valuation_eligible": semantic_results.get("valuation_eligible", False),
-            "content_hash": Deduplicator.generate_hash({
-                "source_name": listing.source_name,
-                "source_key": getattr(listing, 'source_key', None),
-                "source_url": listing.source_url,
-                "title": listing.title,
-                "description": listing.description,
-                "price": listing.price,
-                "price_currency": listing.price_currency,
-                "location": listing.location,
-                "property_type": listing.property_type,
-                "property_subtype": semantic_results.get("property_subtype"),
-                "listing_type": listing.listing_type,
-                "area_sqm": listing.area_sqm,
-                "bedrooms": listing.bedrooms,
-                "bathrooms": listing.bathrooms,
-                "floor_level": semantic_results.get("floor_level"),
-                "developer": semantic_results.get("developer"),
-                "external_id": getattr(listing, 'external_id', None),
-            }),
+            "content_hash": Deduplicator.generate_hash(hash_payload),
             "scraped_at": datetime.utcnow(),
             "raw_data": merged_raw_data,
         }

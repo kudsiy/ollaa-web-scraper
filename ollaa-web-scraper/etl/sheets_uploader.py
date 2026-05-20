@@ -71,8 +71,8 @@ class SheetsUploader:
                 logger.info(f"Worksheet '{sheet_name}' not found. Creating it.")
                 self.worksheet = self.spreadsheet.add_worksheet(title=sheet_name, rows="100", cols="57")
 
-            # Ensure sheet has at least 57 columns for the unified schema
-            if self.worksheet.col_count < 57:
+            # Ensure sheet has exactly 57 columns for the unified schema
+            if self.worksheet.col_count != 57:
                 logger.info(f"Sheet has {self.worksheet.col_count} columns. Resizing to 57.")
                 self.worksheet.resize(cols=57)
 
@@ -85,33 +85,17 @@ class SheetsUploader:
             return None
 
     def _ensure_headers(self):
-        """Ensure row 1 contains the correct UNIFIED_SCHEMA headers.
-        Uses prefix-based comparison: if the first N columns of the existing
-        headers match the schema, assume headers are correct to avoid rewriting.
-        """
+        """Ensure row 1 contains the exact 57-column UNIFIED_SCHEMA headers."""
         try:
             existing_headers = self.worksheet.row_values(1)
         except Exception:
             existing_headers = []
 
-        # Check if the first few columns match the schema (prefix-based check)
-        # This avoids rewriting headers if the sheet has extra trailing columns
-        prefix_match = True
-        check_count = min(len(existing_headers), 5)  # check first 5 columns
-        if check_count > 0:
-            for i in range(check_count):
-                if existing_headers[i] != UNIFIED_SCHEMA[i]:
-                    prefix_match = False
-                    break
-        else:
-            prefix_match = False
-
-        if prefix_match and len(existing_headers) >= 57:
+        is_exact_match = len(existing_headers) == 57 and existing_headers == list(UNIFIED_SCHEMA)
+        if is_exact_match:
             return
 
         logger.info("Headers are missing or incorrect. Updating headers.")
-        # Overwrite row 1 with the correct schema headers
-        # Use RAW input option to prevent any formatting interpretation
         self.worksheet.update('A1:BE1', [UNIFIED_SCHEMA], value_input_option='RAW')
         logger.info("Headers updated successfully.")
 
