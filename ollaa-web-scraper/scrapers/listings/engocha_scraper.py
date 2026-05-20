@@ -53,13 +53,17 @@ class EngochaScraper(PlaywrightScraper):
             await self._init_browser()
             
             listing_urls = await self._find_listing_pages()
-            self.logger.info(f"Found {len(listing_urls)} listing pages")
+            self.logger.info(f"Found {len(listing_urls)} listing categories/pages")
             
-            for url in listing_urls:
-                if len(result.listings) >= limit:
-                    break
-                listings = await self._scrape_listing_page(url)
-                result.listings.extend(listings)
+            # Scrape listing categories in parallel
+            tasks = [self._scrape_listing_page(url) for url in listing_urls]
+            pages_results = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            for page_listings in pages_results:
+                if isinstance(page_listings, list):
+                    result.listings.extend(page_listings)
+                elif isinstance(page_listings, Exception):
+                    self.logger.error(f"Error scraping a listing page: {page_listings}")
                 
             if len(result.listings) > limit:
                 result.listings = result.listings[:limit]
@@ -75,31 +79,11 @@ class EngochaScraper(PlaywrightScraper):
             
         result.duration_seconds = (datetime.utcnow() - start_time).total_seconds()
         return result
-    
-    async def _find_listing_pages(self) -> List[str]:
-        """Find listing pages from website."""
-        pages = []
-        
-        # Known working property listing URLs on Engocha
-        possible_urls = [
-            f"{self.base_url}/real-estate",
-            f"{self.base_url}/apartments-houses-for-sale",
-            f"{self.base_url}/apartments-houses-for-rent",
-        ]
-        
-        for url in possible_urls:
-            soup = await self._fetch_page_js(url)
-            if soup:
-                cards = soup.select('.listing-card, .property-card, .listing-item, [class*="listing"], article')
-                if cards:
-                    pages.append(url)
-                    break
-                
-        return pages if pages else possible_urls[:1]
-    
+
     async def _scrape_listing_page(self, url: str) -> List[ScrapedListing]:
-        """Scrape individual listing page."""
+        """Scrape individual listing page and its pagination."""
         listings = []
+        # Use a shorter timeout for initial page load in concurrent context
         soup = await self._fetch_page_js(url)
         
         if not soup:
@@ -116,15 +100,20 @@ class EngochaScraper(PlaywrightScraper):
                 listings.append(listing)
                 
         pagination = self._get_pagination_pages(soup, url)
-        for page_url in pagination[:5]:
-            page_soup = await self._fetch_page_js(page_url)
-            if page_soup:
-                cards = page_soup.select('.listing-card, .property-card, .listing-item, [class*="listing"]')
-                for card in cards:
-                    listing = self._parse_listing_card(card)
-                    if listing:
-                        listings.append(listing)
-                        
+        if pagination:
+            # Scrape pagination in parallel (limit to 5 pages)
+            self.logger.info(f"Found {len(pagination)} pagination pages for {url}. Scraping first 5 concurrently.")
+            pagination_tasks = [self._fetch_page_js(page_url) for page_url in pagination[:5]]
+            pagination_soups = await asyncio.gather(*pagination_tasks, return_exceptions=True)
+            
+            for page_soup in pagination_soups:
+                if isinstance(page_soup, BeautifulSoup):
+                    cards = page_soup.select('.listing-card, .property-card, .listing-item, [class*="listing"]')
+                    for card in cards:
+                        listing = self._parse_listing_card(card)
+                        if listing:
+                            listings.append(listing)
+                            
         return listings
     
     def _get_pagination_pages(self, soup, base_url: str) -> List[str]:
