@@ -81,38 +81,64 @@ class EngochaScraper(PlaywrightScraper):
         return result
 
     async def _scrape_listing_page(self, url: str) -> List[ScrapedListing]:
-        """Scrape individual listing page and its pagination."""
+        """Scrape individual listing page and its pagination sequentially to respect start_date."""
         listings = []
-        # Use a shorter timeout for initial page load in concurrent context
-        soup = await self._fetch_page_js(url)
+        current_url = url
+        max_pages = 50
+        reached_start_date = False
         
-        if not soup:
-            return listings
-            
-        listing_cards = soup.select(
-            '.listing, .listing-card, .property-card, .listing-item, .property-item, '
-            '[class*="listing"], [class*="property"], article, .item'
-        )
-        
-        for card in listing_cards:
-            listing = self._parse_listing_card(card)
-            if listing:
-                listings.append(listing)
+        for page_num in range(1, max_pages + 1):
+            if reached_start_date:
+                break
                 
-        pagination = self._get_pagination_pages(soup, url)
-        if pagination:
-            # Scrape pagination in parallel (limit to 5 pages)
-            self.logger.info(f"Found {len(pagination)} pagination pages for {url}. Scraping first 5 concurrently.")
-            pagination_tasks = [self._fetch_page_js(page_url) for page_url in pagination[:5]]
-            pagination_soups = await asyncio.gather(*pagination_tasks, return_exceptions=True)
+            self.logger.info(f"Scraping {self.source_name} page {page_num}: {current_url}")
+            soup = await self._fetch_page_js(current_url)
             
-            for page_soup in pagination_soups:
-                if isinstance(page_soup, BeautifulSoup):
-                    cards = page_soup.select('.listing-card, .property-card, .listing-item, [class*="listing"]')
-                    for card in cards:
-                        listing = self._parse_listing_card(card)
-                        if listing:
-                            listings.append(listing)
+            if not soup:
+                break
+                
+            listing_cards = soup.select(
+                '.listing, .listing-card, .property-card, .listing-item, .property-item, '
+                '[class*="listing"], [class*="property"], article, .item'
+            )
+            
+            if not listing_cards:
+                break
+                
+            for card in listing_cards:
+                listing = self._parse_listing_card(card)
+                if listing:
+                    # Check if we should continue based on date
+                    if listing.posted_date and not self.should_continue_crawling(listing.posted_date):
+                        self.logger.info(f"Reached start_date limit at {listing.posted_date}")
+                        reached_start_date = True
+                        break
+                        
+                    listings.append(listing)
+            
+            if reached_start_date:
+                break
+
+            # Find next page link
+            next_link = soup.select_one('.pagination .next a, .pagination a.next, a[rel="next"], .next-page a')
+            if next_link and next_link.get('href'):
+                current_url = self._get_absolute_url(next_link.get('href'))
+            else:
+                # Try to find next page by number
+                pagination_links = soup.select('.pagination a, .page-link, a[class*="page"]')
+                found_next = False
+                for link in pagination_links:
+                    try:
+                        text = link.get_text(strip=True)
+                        if text.isdigit() and int(text) == page_num + 1:
+                            current_url = self._get_absolute_url(link.get('href'))
+                            found_next = True
+                            break
+                    except (ValueError, TypeError):
+                        continue
+                
+                if not found_next:
+                    break
                             
         return listings
     
@@ -141,6 +167,7 @@ class EngochaScraper(PlaywrightScraper):
             area_elem = card.select_one('.area, .size, .sqm, [class*="area"]')
             desc_elem = card.select_one('.description, .desc, .excerpt, p')
             link_elem = card.select_one('a[href]')
+            date_elem = card.select_one('.date, .posted-on, .time, .listing-date, .post-date')
             
             title = title_elem.get_text(strip=True) if title_elem else "Property Listing"
             if title_elem and title_elem.name == 'a':
@@ -154,6 +181,15 @@ class EngochaScraper(PlaywrightScraper):
             location = location_elem.get_text(strip=True) if location_elem else None
             description = desc_elem.get_text(strip=True) if desc_elem else ""
             
+            posted_date = None
+            if date_elem:
+                date_text = date_elem.get_text(strip=True)
+                try:
+                    from dateutil import parser as date_parser
+                    posted_date = date_parser.parse(date_text, fuzzy=True)
+                except Exception:
+                    pass
+
             bedrooms = None
             if bedrooms_elem:
                 bedrooms_text = bedrooms_elem.get_text(strip=True)
@@ -195,7 +231,7 @@ class EngochaScraper(PlaywrightScraper):
                 bedrooms=bedrooms,
                 bathrooms=bathrooms,
                 images=images,
-                posted_date=None,
+                posted_date=posted_date,
                 listing_type=listing_type,
                 source_url=link or self.base_url,
                 raw_data={"card_html": str(card)}
@@ -252,7 +288,7 @@ class EngochaScraper(PlaywrightScraper):
     def _extract_area(self, text: str) -> Optional[float]:
         """Extract area in sqm from text."""
         patterns = [
-            r'([\d,]+(?:\.\d+)?)\s*(?:sq\.?\s*m\.?|m²|sq\s*metres?|ካዕራ)',
+            r'([\d,]+(?:\.\d+)?)\s*(?:sq\.?\s*m\.?|m²|sq\s*metres?|ካዕራ|ካሬ|m2|M2|square\s*meter|square\s*metres|ካሬ\s*ሜትር)',
             r'([\d,]+(?:\.\d+)?)\s*(?:sqft|ካረ)'
         ]
         

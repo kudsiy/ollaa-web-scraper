@@ -85,8 +85,10 @@ class TelegramScraper(BaseScraper):
         messages = []
         before = None
         
-        for page_num in range(10):  # Max 10 pages to avoid excessive requests
-            if len(messages) >= limit:
+        reached_start_date = False
+        
+        for page_num in range(50):  # Increased to 50 for deep crawling
+            if len(messages) >= limit or reached_start_date:
                 break
             
             url = self.web_preview_url
@@ -129,6 +131,7 @@ class TelegramScraper(BaseScraper):
                     if msg_data:
                         msg_date = msg_data.get("date")
                         if msg_date and msg_date < start_date:
+                            reached_start_date = True
                             continue
                         page_messages.append(msg_data)
                         if len(page_messages) >= limit:
