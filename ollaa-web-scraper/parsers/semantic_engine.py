@@ -154,23 +154,44 @@ class SemanticProcessingEngine:
             return "APARTMENT", None
         if re.search(r'villa|ቪላ|G\+\d', text, re.I):
             return "VILLA", None
-        if re.search(r'land|መሬት|plot', text, re.I):
+        if re.search(r'land|መሬት|plot|ማሳ', text, re.I):
             return "LAND", None
         if re.search(r'warehouse|መጋዘን', text, re.I):
             return "WAREHOUSE", None
         if re.search(r'office|ቢሮ', text, re.I):
             return "OFFICE", None
-        return "HOUSE", None
+        if re.search(r'shop|ሱቅ', text, re.I):
+            return "SHOP", None
+
+        # Fallback to title indicators
+        if "ቤት" in text or "house" in text.lower():
+            return "HOUSE", None
+
+        return "HOUSE", None  # Default
 
     def _resolve_area(self, text: str) -> (Optional[float], str):
         # Look for patterns like 200 sqm, 200 ካሬ
-        area_match = re.search(r'(\d+(?:\.\d+)?)\s*(?:sqm|sq\.m|ካሬ|m2|M2)', text, re.I)
-        area = float(area_match.group(1)) if area_match else None
-        
+        area_match = re.search(r'(\d+(?:\.\d+)?)\s*(?:sqm|sq\.m|ካሬ|m2|M2|square\s*meter|square\s*metres|ካሬ\s*ሜትር)', text, re.I)
+        area = None
+        if area_match:
+            try:
+                area = float(area_match.group(1))
+            except:
+                pass
+
+        if area is None:
+            # Try Amharic numerals with ካሬ
+            match = re.search(r'([፩-፼]+)\s*(?:ካሬ|ካሬ\s*ሜትር)', text)
+            if match:
+                val_str = match.group(1)
+                parsed_nums = self.amharic_parser.extract_numbers(val_str)
+                if parsed_nums:
+                    area = parsed_nums[0]
+
         area_type = "PLOTTED"
-        if re.search(r'built-up|ካርታ|ያረፈበት', text, re.I):
+        if re.search(r'built-up|ካርታ|ያረፈበት|መኖሪያ', text, re.I):
             area_type = "BUILT_UP"
-            
+
         return area, area_type
 
     def _extract_financials(self, text: str) -> Dict[str, Any]:
@@ -283,6 +304,15 @@ class SemanticProcessingEngine:
         return results
 
     def _check_eligibility(self, processed: Dict[str, Any]) -> bool:
-        # Valuation eligible if we have price, location, property_type and area
+        """
+        Determine if listing is eligible for automated valuation.
+        Requires: price, location, property_type, and area.
+        """
         required = ["price", "refined_location", "property_type", "area_sqm"]
-        return all(processed.get(f) is not None for f in required)
+        missing = [f for f in required if processed.get(f) is None]
+        
+        if not missing:
+            return True
+            
+        logger.debug(f"Listing not valuation eligible. Missing: {missing}. Title: {processed.get('title')}")
+        return False

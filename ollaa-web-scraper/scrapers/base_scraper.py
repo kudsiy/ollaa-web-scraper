@@ -145,6 +145,31 @@ class BaseScraper(ABC):
         """Convert relative URL to absolute URL."""
         return urljoin(base or self.base_url, relative_url)
     
+    def _get_start_date(self) -> datetime:
+        """Parse start_date from config as datetime."""
+        try:
+            return datetime.strptime(self.config.scraper.start_date, "%Y-%m-%d")
+        except (ValueError, TypeError):
+            return datetime(2024, 1, 1)
+
+    def should_continue_crawling(self, listing_date: Optional[datetime]) -> bool:
+        """
+        Determine if crawling should continue based on the listing date.
+        
+        Args:
+            listing_date: The date the listing was posted
+            
+        Returns:
+            True if we should continue (listing is newer than start_date),
+            False if we've reached the target date.
+        """
+        if not listing_date:
+            # If no date is available, we usually continue until a page limit is hit
+            return True
+            
+        start_date = self._get_start_date()
+        return listing_date >= start_date
+
     @abstractmethod
     def scrape(self) -> ScrapeResult:
         """
@@ -183,6 +208,7 @@ class BaseScraper(ABC):
             price_elem = card_element.select_one(selectors.get("price", ""))
             location_elem = card_element.select_one(selectors.get("location", ""))
             desc_elem = card_element.select_one(selectors.get("description", ""))
+            date_elem = card_element.select_one(selectors.get("date", ""))
             
             title = title_elem.get_text(strip=True) if title_elem else "Untitled"
             price_text = price_elem.get_text(strip=True) if price_elem else "0"
@@ -191,6 +217,21 @@ class BaseScraper(ABC):
             extractor = PriceExtractor()
             price = extractor.extract(price_text)
             
+            posted_date = None
+            if date_elem:
+                date_text = date_elem.get_text(strip=True)
+                try:
+                    from dateutil import parser as date_parser
+                    posted_date = date_parser.parse(date_text, fuzzy=True)
+                except Exception:
+                    # Fallback to some common formats if dateutil fails
+                    for fmt in ["%b %d, %Y", "%Y-%m-%d", "%d/%m/%Y"]:
+                        try:
+                            posted_date = datetime.strptime(date_text, fmt)
+                            break
+                        except ValueError:
+                            continue
+
             listing = ScrapedListing(
                 source_url=self.base_url,
                 source_name=self.source_name,
@@ -198,6 +239,7 @@ class BaseScraper(ABC):
                 description=desc_elem.get_text(strip=True) if desc_elem else "",
                 price=price,
                 location=location_elem.get_text(strip=True) if location_elem else None,
+                posted_date=posted_date,
                 raw_data={"raw_html": str(card_element)}
             )
             return listing

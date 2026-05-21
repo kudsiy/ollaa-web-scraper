@@ -32,7 +32,8 @@ class GenericScraper(BaseScraper):
             "title": "h2 a, h3 a, .item-title a, .title a, a.link, .listing-title a, .property-title a, .item-title, h4 a",
             "price": ".item-price, .price, .listing-price, .amount, .property-price, .text-price, .price-tag, .item-price-text",
             "location": ".item-address, address, .location, .area, .property-location, .item-location, .location-text, .item-sub-title",
-            "description": ".item-description, .description, .excerpt, p, .property-excerpt, .item-body, .listing-description"
+            "description": ".item-description, .description, .excerpt, p, .property-excerpt, .item-body, .listing-description",
+            "date": ".item-date, .date, .time, .posted-on, .property-date, .listing-date, .post-date, .entry-date"
         }
         
         # Override with site-specific selectors if provided in registry (future enhancement)
@@ -41,12 +42,14 @@ class GenericScraper(BaseScraper):
 
     def scrape(self) -> ScrapeResult:
         """
-        Scrape the site using the configured selectors.
+        Scrape the site using the configured selectors and multi-page pagination.
         """
         start_time = datetime.now(timezone.utc)
         result = ScrapeResult(success=False)
         
         limit = self.config.scraper.fetch_limit
+        max_pages = 50 # Safe upper limit for deep crawling
+        reached_start_date = False
         
         try:
             # Try a few common paths if base_url is just the homepage
@@ -57,44 +60,75 @@ class GenericScraper(BaseScraper):
                 paths = [""]
                 
             for path in paths:
-                if len(result.listings) >= limit:
+                if len(result.listings) >= limit or reached_start_date:
                     break
                     
-                url = self._get_absolute_url(path)
-                self.logger.info(f"Fetching {url}")
-                soup = self.scrape_page(url)
+                base_path_url = self._get_absolute_url(path)
                 
-                if not soup:
-                    continue
-                    
-                cards = soup.select(self.selectors["card"])
-                self.logger.info(f"Found {len(cards)} cards on {url}")
-                
-                for card in cards:
-                    if len(result.listings) >= limit:
+                for page in range(1, max_pages + 1):
+                    if len(result.listings) >= limit or reached_start_date:
                         break
                         
-                    listing = self.parse_listing_card(card, self.selectors)
-                    if listing:
-                        # Ensure we have a valid source URL
-                        if listing.source_url == self.base_url or not listing.source_url:
-                            # Try to find a link in the card
-                            link_elem = card.select_one("a[href]")
-                            if link_elem:
-                                listing.source_url = self._get_absolute_url(link_elem.get("href"))
-                        
-                        # Add metadata
-                        listing.raw_data["source_key"] = self.source_key
-                        listing.raw_data["filter_url"] = url
-                        
-                        # Determine listing type
-                        config = SOURCE_REGISTRY[self.source_key]
-                        if config["valuation_signal"] in ["liquidation_value", "primary_auction"]:
-                            listing.listing_type = "auction"
+                    # Handle pagination
+                    if page == 1:
+                        url = base_path_url
+                    else:
+                        # Try common pagination patterns
+                        if "?" in base_path_url:
+                            url = f"{base_path_url}&page={page}"
                         else:
-                            listing.listing_type = "market"
+                            url = f"{base_path_url.rstrip('/')}/page/{page}/"
+
+                    self.logger.info(f"Fetching {url}")
+                    soup = self.scrape_page(url)
+                    
+                    if not soup:
+                        break # Stop if page fails to load
+                        
+                    cards = soup.select(self.selectors["card"])
+                    if not cards:
+                        self.logger.info(f"No more cards found on {url}")
+                        break # Stop if no cards found
+                        
+                    self.logger.info(f"Found {len(cards)} cards on {url}")
+                    
+                    page_listings_count = 0
+                    for card in cards:
+                        if len(result.listings) >= limit:
+                            break
                             
-                        result.listings.append(listing)
+                        listing = self.parse_listing_card(card, self.selectors)
+                        if listing:
+                            # Check if we should continue based on date
+                            if listing.posted_date and not self.should_continue_crawling(listing.posted_date):
+                                self.logger.info(f"Reached start_date limit at {listing.posted_date}")
+                                reached_start_date = True
+                                break
+                                
+                            # Ensure we have a valid source URL
+                            if listing.source_url == self.base_url or not listing.source_url:
+                                # Try to find a link in the card
+                                link_elem = card.select_one("a[href]")
+                                if link_elem:
+                                    listing.source_url = self._get_absolute_url(link_elem.get("href"))
+                            
+                            # Add metadata
+                            listing.raw_data["source_key"] = self.source_key
+                            listing.raw_data["filter_url"] = url
+                            
+                            # Determine listing type
+                            config = SOURCE_REGISTRY[self.source_key]
+                            if config["valuation_signal"] in ["liquidation_value", "primary_auction"]:
+                                listing.listing_type = "auction"
+                            else:
+                                listing.listing_type = "market"
+                                
+                            result.listings.append(listing)
+                            page_listings_count += 1
+                    
+                    if page_listings_count == 0 and page > 1:
+                        # If no valid listings on this page and it's not the first page, might be done
+                        break
                         
             result.success = True
             result.scraped_count = len(result.listings)

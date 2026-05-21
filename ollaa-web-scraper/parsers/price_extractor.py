@@ -58,7 +58,8 @@ class PriceExtractor:
         patterns = [
             r'(\d+(?:,\d{3})*(?:\.\d+)?)\s*(?:million|mio|m)\s*(?:ETB|Birr|ብር)?',
             r'(?:ETB|Birr|ብር)\s*(\d+(?:,\d{3})*(?:\.\d+)?)\s*(?:million|mio|m)',
-            r'(\d+(?:,\d{3})*(?:\.\d+)?)\s*(?:ሚሊዮን|ሚሊዮን|ሚ)'
+            r'(\d+(?:,\d{3})*(?:\.\d+)?)\s*(?:ሚሊዮን|ሚሊየን|ሚሊዮን|ሚ)',
+            r'(\d+(?:,\d{3})*(?:\.\d+)?)\s*(?:mil|mill|millions)'
         ]
         
         for pattern in patterns:
@@ -77,7 +78,7 @@ class PriceExtractor:
         """
         patterns = [
             r'(\d+(?:,\d{3})*(?:\.\d+)?)\s*(?:thousand|k)\s*(?:ETB|Birr)?',
-            r'(\d+(?:,\d{3})*(?:\.\d+)?)\s*(?:ሺ|ሺር)'
+            r'(\d+(?:,\d{3})*(?:\.\d+)?)\s*(?:ሺ|ሺህ|ሺር)'
         ]
         
         for pattern in patterns:
