@@ -30,7 +30,14 @@ LOCATION_KEYWORDS = [
     "አለም", "ሮድስይ", "ለሜን", "ሎጀስቲክ", "ካራ", "አድሳር", "ሶሊሳ", "ማእከል", "ሀያ ሁለተ",
     "ካዛንቺስ", "ጃክሮስ", "ጎሮ", "ሰሚት", "ኮተቤ", "ሲኤምሲ", "ለቡ", "ቃሊቲ", "ቱሉ ዲምቱ",
     "ጎተራ", "ሳሪስ", "ቡልቡላ", "ሀያት", "ጃክሮስ", "ቦሌ አራብሳ", "መሪ", "ሎቄ", "ቤተል", "አየር ጤና", 
-    "ጦር ኃይሎች", "አስኮ", "ዊንጌት", "ፈረንሳይ", "ጉርድ ሾላ", "ቦሌ ሚካኤል", "ቦሌ አትላስ", "ሀያት"
+    "ጦር ኃይሎች", "አስኮ", "ዊንጌት", "ፈረንሳይ", "ጉርድ ሾላ", "ቦሌ ሚካኤል", "ቦሌ አትላስ", "ሀያት",
+    "Lideta", "ልደታ", "Geja Sefer", "ገጃ ሰፈር", "Balcha", "ባልቻ", "Abnet", "አብነት",
+    "Zenebework", "ዘነበወርቅ", "Ayertena", "አየር ጤና", "Total", "ቶታል", "Alem Bank", "ዓለም ባንክ",
+    "Bethel", "ቤቴል", "Asko", "አስኮ", "Wingate", "ዊንጌት", "Shiromeda", "ሽሮ ሜዳ", 
+    "Addisu Gebeya", "አዲሱ ገበያ", "Pasta Factory", "Entoto", "እንጦጦ", "Merkato", "መሪካቶ",
+    "Autobus Tera", "አውቶብስ ተራ", "Sebategna", "ሰባተኛ", "Sheger", "ሸገር", "Sululta", "ሱሉልታ",
+    "Burayu", "ቡራዩ", "Sebeta", "ሰበታ", "Legetafo", "ለገጣፎ", "Sendafa", "ሰንዳፋ", "Gelan", "ገላን",
+    "Dukem", "ዱከም", "Bishoftu", "ቢሾፍቱ"
 ]
 
 PROPERTY_KEYWORDS = [
@@ -252,6 +259,7 @@ class AmharicParser:
     def extract_location(self, text: str) -> Optional[str]:
         """
         Extract location from Amharic or English text.
+        Enhanced with more specific patterns and anchor keywords.
         
         Args:
             text: Input text containing location information
@@ -259,6 +267,22 @@ class AmharicParser:
         Returns:
             Location string or None
         """
+        if not text:
+            return None
+
+        # 1. Anchored patterns (High confidence)
+        anchors = [
+            r'located?\s+(?:in|at)', r'address', r'sub\s*city', r'zone', r'area',
+            r'አድራሻ', r'ቦታ', r'ክፍለ ከተማ', r'ሰፈር', r'የሚገኝበት'
+        ]
+        for anchor in anchors:
+            match = re.search(rf'{anchor}[:\s\-\x16\x17\x18]*([^\n,]+)', text, re.IGNORECASE)
+            if match:
+                loc_candidate = match.group(1).strip()
+                if len(loc_candidate) > 2:
+                    return loc_candidate
+
+        # 2. Keyword-based matching
         matches = []
         for location in LOCATION_KEYWORDS:
             loc_clean = location.strip()
@@ -274,13 +298,14 @@ class AmharicParser:
                 return sorted(specific_matches, key=len, reverse=True)[0]
             return sorted(matches, key=len, reverse=True)[0]
                 
+        # 3. Structural patterns (Fallbacks)
         patterns = [
-            r'(?:located?\s+(?:in|at)|address|sub\s*city|zone|area)[:\s]*([^\n,]+)',
-            r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*,?\s*(?:Addis\s+Ababa|Kaliti|Kality|Bole|Piassa))',
+            r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*,?\s*(?:Addis\s+Ababa|Kaliti|Kality|Bole|Piassa|Yeka|Kirkos|Arada))',
+            r'([^\n,]+)(?:ሚካኤል|አትላስ|አደባባይ|ሕንፃ)'
         ]
         
         for pattern in patterns:
-            match = re.search(pattern, text, re.IGNORECASE)
+            match = re.search(pattern, text)
             if match:
                 return match.group(1).strip()
                 
