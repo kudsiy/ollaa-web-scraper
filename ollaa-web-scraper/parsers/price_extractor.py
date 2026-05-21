@@ -24,6 +24,7 @@ class PriceExtractor:
     def extract(self, text: str) -> Optional[float]:
         """
         Extract price from text string.
+        Enhanced with more patterns and multipliers.
         
         Args:
             text: Text containing price information
@@ -36,7 +37,11 @@ class PriceExtractor:
             
         text = text.strip()
         
+        # Pre-process: remove some common confusing text
+        clean_text = re.sub(r'09\d{8}', '', text) # Remove phone numbers
+        
         patterns = [
+            self._pattern_anchored,
             self._pattern_million,
             self._pattern_thousand,
             self._pattern_etb,
@@ -45,10 +50,30 @@ class PriceExtractor:
         ]
         
         for pattern in patterns:
-            price = pattern(text)
+            price = pattern(clean_text)
             if price is not None:
                 return price
                 
+        return None
+
+    def _pattern_anchored(self, text: str) -> Optional[float]:
+        """Match anchored patterns like 'Price: 5,000,000'"""
+        anchors = ["price", "value", "ዋጋ", "ብር", "መነሻ ዋጋ", "total price", "ያለበት እዳ"]
+        pattern = r"([\d,]+(?:\.\d+)?)"
+        for anchor in anchors:
+            match = re.search(rf"{anchor}[:\s\-\x16\x17\x18]*{pattern}", text, re.I)
+            if match:
+                try:
+                    val = float(match.group(1).replace(',', ''))
+                    # Check for multipliers near the match
+                    context = text[match.start():match.end()+20].lower()
+                    if any(m in context for m in ['million', 'ሚሊዮን', 'm']):
+                        val *= 1_000_000
+                    elif any(k in context for k in ['k', 'ሺህ']):
+                        val *= 1_000
+                    return val
+                except:
+                    continue
         return None
     
     def _pattern_million(self, text: str) -> Optional[float]:

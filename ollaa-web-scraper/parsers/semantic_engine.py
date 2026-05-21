@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 class SemanticProcessingEngine:
     """
     12-step Semantic Processing Engine for Ethiopian property listings.
+    Enhanced with anchored extraction and advanced location patterns.
     """
 
     def __init__(self):
@@ -29,7 +30,8 @@ class SemanticProcessingEngine:
                 "Bole", "ቦሌ", "Bole Atlas", "Bole Medhanialem", "Bole Japan", 
                 "Bole Bulbula", "Bulbula", "Imperial", "22", "Haya Hulet",
                 "Gerji", "ገርጂ", "Summit", "ሰሚት", "Jackros", "ጃክሮስ",
-                "Goro", "ጎሮ", "Wello Sefer", "ወሎ ሰፈር", "Rwanda", "Friendship"
+                "Goro", "ጎሮ", "Wello Sefer", "ወሎ ሰፈር", "Rwanda", "Friendship",
+                "Bole Arabsa", "ቦሌ አራብሳ", "Mera", "መሪ", "Loke", "ሎቄ"
             ],
             "Yeka": [
                 "Yeka", "የካ", "Megenagna", "ሜገናኛ", "CMC", "Summit", "Ayat", "አያት", 
@@ -56,11 +58,11 @@ class SemanticProcessingEngine:
             "Kolfe Keranio": [
                 "Kolfe", "Keranio", "ኮልፌ", "ቀራኒዮ", "Zenebework", "ዘነበወርቅ", 
                 "Ayertena", "አየር ጤና", "Total", "ቶታል", "Alem Bank", "ዓለም ባንክ",
-                "Bethel", "ቤቴል", "Asko", "አስኮ", "Wingate", "ዊንጌት"
+                "Bethel", "ቤቴል", "Asko", "አስኮ", "Wingate", "ዊንጌት", "Tor Hailoch", "ጦር ኃይሎች"
             ],
             "Akaki Kality": [
                 "Akaki", "አቃቂ", "Kality", "ቃሊቲ", "Tulu Dimtu", "ቱሉ ዲምቱ", 
-                "Koye Feche", "ቆዬ ፈጬ", "Gelala", "ገላላ", "Sari"
+                "Koye Feche", "ቆዬ ፈጬ", "Gelala", "ገላላ", "Saris", "ሳሪስ"
             ],
             "Gullele": [
                 "Gullele", "ጉለሌ", "Shiromeda", "ሽሮ ሜዳ", "Addisu Gebeya", "አዲሱ ገበያ", 
@@ -78,7 +80,7 @@ class SemanticProcessingEngine:
         }
 
     def process(self, raw_listing: Dict[str, Any]) -> Dict[str, Any]:
-        """Runs the 12-step pipeline on a listing."""
+        """Runs the enhanced 12-step pipeline on a listing."""
         text = (raw_listing.get("title", "") + " " + raw_listing.get("description", "")).strip()
         normalized_text = self.amharic_parser.normalize_text(text)
         
@@ -93,10 +95,10 @@ class SemanticProcessingEngine:
         # 3. Property Type/Subtype
         processed["property_type"], processed["property_subtype"] = self._detect_property_type(normalized_text)
         
-        # 4. Area Resolution
+        # 4. Area Resolution (Enhanced with Anchors)
         processed["area_sqm"], processed["area_type"] = self._resolve_area(normalized_text)
         
-        # 5 & 10. Financial Extraction & Currency Detection
+        # 5 & 10. Financial Extraction & Currency Detection (Enhanced with Anchors)
         financials = self._extract_financials(normalized_text)
         processed.update(financials)
         
@@ -127,7 +129,7 @@ class SemanticProcessingEngine:
         return processed
 
     def _classify_intent(self, text: str) -> str:
-        sale_score = len(re.findall(r'sale|ሽያጭ|ሺያጭ|ለሽያጭ|የሚሸጥ', text, re.I))
+        sale_score = len(re.findall(r'sale|ሽያጭ|ሺያጭ|ለሽያጭ|የሚሸጥ|auction|ጨረታ|ሐራጅ', text, re.I))
         rent_score = len(re.findall(r'rent|ኪራይ|ለኪራይ|የሚከራይ', text, re.I))
         
         if sale_score > rent_score:
@@ -141,6 +143,8 @@ class SemanticProcessingEngine:
             return "PROMOTIONAL"
         if re.search(r'wanted|inquiry|እፈልጋለሁ|ፈላጊ', text, re.I):
             return "INQUIRY"
+        if re.search(r'auction|ጨረታ|ሐраጅ|foreclosure', text, re.I):
+            return "AUCTION"
         for dev in self.developers:
             if dev.lower() in text.lower():
                 return "DEVELOPER"
@@ -169,18 +173,41 @@ class SemanticProcessingEngine:
 
         return "HOUSE", None  # Default
 
+    def _anchored_extract(self, text: str, anchors: List[str], pattern: str) -> Optional[str]:
+        """Extract value near an anchor keyword."""
+        for anchor in anchors:
+            # Look for anchor followed by optional separator and then the pattern
+            # Support both English and Amharic separators
+            full_pattern = rf"{anchor}[:\s\-\x16\x17\x18]*({pattern})"
+            match = re.search(full_pattern, text, re.I)
+            if match:
+                return match.group(1)
+        return None
+
     def _resolve_area(self, text: str) -> (Optional[float], str):
-        # Look for patterns like 200 sqm, 200 ካሬ
-        area_match = re.search(r'(\d+(?:\.\d+)?)\s*(?:sqm|sq\.m|ካሬ|m2|M2|square\s*meter|square\s*metres|ካሬ\s*ሜትር)', text, re.I)
+        # 1. Anchored extraction
+        area_anchors = ["area", "size", "ቦታ", "ስፋት", "ካሬ", "ያረፈበት"]
+        area_pattern = r"\d+(?:\.\d+)?"
+        anchored_val = self._anchored_extract(text, area_anchors, area_pattern)
+        
         area = None
-        if area_match:
+        if anchored_val:
             try:
-                area = float(area_match.group(1))
+                area = float(anchored_val)
             except:
                 pass
 
         if area is None:
-            # Try Amharic numerals with ካሬ
+            # 2. Standard patterns like 200 sqm, 200 ካሬ
+            area_match = re.search(r'(\d+(?:\.\d+)?)\s*(?:sqm|sq\.m|ካሬ|m2|M2|square\s*meter|square\s*metres|ካሬ\s*ሜትር)', text, re.I)
+            if area_match:
+                try:
+                    area = float(area_match.group(1))
+                except:
+                    pass
+
+        if area is None:
+            # 3. Try Amharic numerals with ካሬ
             match = re.search(r'([፩-፼]+)\s*(?:ካሬ|ካሬ\s*ሜትር)', text)
             if match:
                 val_str = match.group(1)
@@ -201,19 +228,38 @@ class SemanticProcessingEngine:
         if re.search(r'\$|USD|ዶላር', text, re.I):
             results["currency"] = "USD"
         
-        # Price extraction (basic)
-        price_match = re.search(r'(?:price|ዋጋ|ብር|ETB)?\s*([\d,]+(?:\.\d+)?)\s*(?:million|ሚሊዮን|M|k|ሺህ)?', text, re.I)
-        if price_match:
+        # 1. Anchored Price extraction
+        price_anchors = ["price", "value", "ዋጋ", "ብር", "መነሻ ዋጋ", "total price"]
+        price_pattern = r"[\d,]+(?:\.\d+)?"
+        anchored_price = self._anchored_extract(text, price_anchors, price_pattern)
+        
+        if anchored_price:
             try:
-                val = price_match.group(1).replace(',', '')
-                price = float(val)
-                if 'million' in price_match.group(0).lower() or 'ሚሊዮን' in price_match.group(0).lower() or 'M' in price_match.group(0):
-                    price *= 1_000_000
-                elif 'k' in price_match.group(0).lower() or 'ሺህ' in price_match.group(0).lower():
-                    price *= 1_000
-                results["price"] = price
+                val = anchored_price.replace(',', '')
+                results["price"] = float(val)
+                # Check for million/k multipliers near the price
+                context = text[text.find(anchored_price):text.find(anchored_price)+20].lower()
+                if any(m in context for m in ['million', 'ሚሊዮን', 'm']):
+                    results["price"] *= 1_000_000
+                elif any(k in context for k in ['k', 'ሺህ']):
+                    results["price"] *= 1_000
             except:
                 pass
+        
+        if results["price"] is None:
+            # 2. Price extraction (basic standard pattern)
+            price_match = re.search(r'(?:price|ዋጋ|ብር|ETB)?\s*([\d,]+(?:\.\d+)?)\s*(?:million|ሚሊዮን|M|k|ሺህ)?', text, re.I)
+            if price_match:
+                try:
+                    val = price_match.group(1).replace(',', '')
+                    price = float(val)
+                    if 'million' in price_match.group(0).lower() or 'ሚሊዮን' in price_match.group(0).lower() or 'M' in price_match.group(0):
+                        price *= 1_000_000
+                    elif 'k' in price_match.group(0).lower() or 'ሺህ' in price_match.group(0).lower():
+                        price *= 1_000
+                    results["price"] = price
+                except:
+                    pass
         
         # Loan %
         loan_match = re.search(r'(\d+)\s*%\s*(?:loan|ባንክ|እዳ)', text, re.I)
@@ -242,12 +288,35 @@ class SemanticProcessingEngine:
                 return dev
         return None
 
-    def _map_location(self, text: str) -> Optional[str]:
+    def _map_location_detailed(self, text: str) -> Dict[str, Any]:
+        result = {"refined_location": None, "region": "Addis Ababa", "city": "Addis Ababa", "subcity": None}
+        
+        # 1. Anchored Location Extraction
+        loc_anchors = ["location", "address", "ቦታ", "አድራሻ", "ክፍለ ከተማ", "ሰፈር"]
+        # Pattern for location is trickier, let's look for known keywords near anchors
+        for anchor in loc_anchors:
+            match = re.search(rf"{anchor}[:\s\-]*([^\n,]+)", text, re.I)
+            if match:
+                loc_text = match.group(1)
+                for zone, keywords in self.locations.items():
+                    for kw in keywords:
+                        if kw.lower() in loc_text.lower():
+                            result["refined_location"] = zone
+                            result["subcity"] = zone
+                            if zone == "Sheger City":
+                                result["city"] = "Sheger"
+                            return result
+
+        # 2. Fallback to global keyword search
         for zone, keywords in self.locations.items():
             for kw in keywords:
                 if kw.lower() in text.lower():
-                    return zone
-        return None
+                    result["refined_location"] = zone
+                    result["subcity"] = zone
+                    if zone == "Sheger City":
+                        result["city"] = "Sheger"
+                    return result
+        return result
 
     def _extract_contacts(self, text: str) -> List[str]:
         # Ethiopian phone numbers: +251..., 09..., 07...
@@ -262,18 +331,6 @@ class SemanticProcessingEngine:
             return int(floor_match.group(1))
         return None
 
-    def _map_location_detailed(self, text: str) -> Dict[str, Any]:
-        result = {"refined_location": None, "region": "Addis Ababa", "city": "Addis Ababa", "subcity": None}
-        for zone, keywords in self.locations.items():
-            for kw in keywords:
-                if kw.lower() in text.lower():
-                    result["refined_location"] = zone
-                    result["subcity"] = zone
-                    if zone == "Sheger City":
-                        result["city"] = "Sheger"
-                    return result
-        return result
-
     def _extract_total_floors(self, text: str) -> Optional[int]:
         match = re.search(r'(?:total|ጠቅላላ)\s*(\d+)\s*(?:floors|ፎቅ)', text, re.I)
         if match:
@@ -286,17 +343,36 @@ class SemanticProcessingEngine:
             "parking_spaces": None, "water_supply": False, "electricity": False
         }
         
-        bed_match = re.search(r'(\d+)\s*(?:bedroom|መኝታ)', text, re.I)
-        if bed_match: results["bedrooms"] = int(bed_match.group(1))
+        # Anchored feature extraction
+        bed_anchors = ["bedroom", "መኝታ", "bed"]
+        bath_anchors = ["bathroom", "መታጠቢያ", "ባኞ", "bath"]
         
-        bath_match = re.search(r'(\d+)\s*(?:bathroom|መታጠቢያ|ባኞ)', text, re.I)
-        if bath_match: results["bathrooms"] = int(bath_match.group(1))
+        bed_val = self._anchored_extract(text, bed_anchors, r"\d+")
+        if bed_val: results["bedrooms"] = int(bed_val)
+        
+        bath_val = self._anchored_extract(text, bath_anchors, r"\d+")
+        if bath_val: results["bathrooms"] = int(bath_val)
+        
+        # Standard patterns fallback
+        if results["bedrooms"] is None:
+            bed_match = re.search(r'(\d+)\s*(?:bedroom|መኝታ)', text, re.I)
+            if bed_match: results["bedrooms"] = int(bed_match.group(1))
+        
+        if results["bathrooms"] is None:
+            bath_match = re.search(r'(\d+)\s*(?:bathroom|መታጠቢያ|ባኞ)', text, re.I)
+            if bath_match: results["bathrooms"] = int(bath_match.group(1))
         
         kit_match = re.search(r'(\d+)\s*(?:kitchen|ወጥ ቤት)', text, re.I)
-        if kit_match: results["kitchens"] = int(kit_match.group(1))
+        if kit_match: 
+            results["kitchens"] = int(kit_match.group(1))
+        elif re.search(r'kitchen|ወጥ ቤት', text, re.I):
+            results["kitchens"] = 1
         
         park_match = re.search(r'(\d+)\s*(?:parking|መኪና ማቆሚያ)', text, re.I)
-        if park_match: results["parking_spaces"] = int(park_match.group(1))
+        if park_match: 
+            results["parking_spaces"] = int(park_match.group(1))
+        elif re.search(r'parking|መኪና ማቆሚያ', text, re.I):
+            results["parking_spaces"] = 1
         
         if re.search(r'water|ውሃ', text, re.I): results["water_supply"] = True
         if re.search(r'electricity|መብራት', text, re.I): results["electricity"] = True
@@ -310,6 +386,11 @@ class SemanticProcessingEngine:
         """
         required = ["price", "refined_location", "property_type", "area_sqm"]
         missing = [f for f in required if processed.get(f) is None]
+        
+        # Special case: Land doesn't need bedrooms but needs area and location
+        if processed.get("property_type") == "LAND":
+            if all(processed.get(f) is not None for f in ["price", "refined_location", "area_sqm"]):
+                return True
         
         if not missing:
             return True
