@@ -1,4 +1,3 @@
-
 import re
 import logging
 from typing import Dict, Any, List, Optional
@@ -186,29 +185,45 @@ class SemanticProcessingEngine:
 
     def _resolve_area(self, text: str) -> (Optional[float], str):
         # 1. Anchored extraction
-        area_anchors = ["area", "size", "ቦታ", "ስፋት", "ካሬ", "ያረፈበት"]
-        area_pattern = r"\d+(?:\.\d+)?"
+        area_anchors = ["area", "size", "ቦታ", "ስፋት", "ካሬ", "ያረፈበት", "የቦታው ስፋት", "ጠቅላላ ስፋት"]
+        # Aggressive area pattern including Amharic numerals and common separators
+        area_pattern = r"[\d,፩-፼]+(?:\.[\d]+)?"
         anchored_val = self._anchored_extract(text, area_anchors, area_pattern)
         
         area = None
         if anchored_val:
             try:
-                area = float(anchored_val)
+                if re.search(r'[፩-፼]', anchored_val):
+                    parsed_nums = self.amharic_parser.extract_numbers(anchored_val)
+                    if parsed_nums:
+                        area = parsed_nums[0]
+                else:
+                    area = float(anchored_val.replace(',', ''))
             except:
                 pass
 
         if area is None:
-            # 2. Standard patterns like 200 sqm, 200 ካሬ
-            area_match = re.search(r'(\d+(?:\.\d+)?)\s*(?:sqm|sq\.m|ካሬ|m2|M2|square\s*meter|square\s*metres|ካሬ\s*ሜትር)', text, re.I)
-            if area_match:
-                try:
-                    area = float(area_match.group(1))
-                except:
-                    pass
+            # 2. Standard patterns like 200 sqm, 200 ካሬ, ካሬ 200
+            # Specifically looking for Amharic 'ካሬ' and 'ካሬ ሜትር' anchored to numbers
+            patterns = [
+                r'(\d+(?:\.\d+)?)\s*(?:sqm|sq\.m|ካሬ|m2|M2|square\s*meter|square\s*metres|ካሬ\s*ሜትር)',
+                r'(?:ካሬ|ካሬ\s*ሜትር|ስፋት|Area)\s*[:\-\s]*(\d+(?:\.\d+)?)'
+            ]
+            for pattern in patterns:
+                area_match = re.search(pattern, text, re.I)
+                if area_match:
+                    try:
+                        area = float(area_match.group(1).replace(',', ''))
+                        break
+                    except:
+                        pass
 
         if area is None:
             # 3. Try Amharic numerals with ካሬ
             match = re.search(r'([፩-፼]+)\s*(?:ካሬ|ካሬ\s*ሜትር)', text)
+            if not match:
+                match = re.search(r'(?:ካሬ|ካሬ\s*ሜትር)\s*([፩-፼]+)', text)
+                
             if match:
                 val_str = match.group(1)
                 parsed_nums = self.amharic_parser.extract_numbers(val_str)
@@ -382,18 +397,18 @@ class SemanticProcessingEngine:
     def _check_eligibility(self, processed: Dict[str, Any]) -> bool:
         """
         Determine if listing is eligible for automated valuation.
-        Requires: price, location, property_type, and area.
+        Requires: price, location, property_type, and MANDATORY area_sqm.
         """
         required = ["price", "refined_location", "property_type", "area_sqm"]
-        missing = [f for f in required if processed.get(f) is None]
         
-        # Special case: Land doesn't need bedrooms but needs area and location
-        if processed.get("property_type") == "LAND":
-            if all(processed.get(f) is not None for f in ["price", "refined_location", "area_sqm"]):
-                return True
+        # Check if any required field is None or area_sqm is 0
+        for field in required:
+            val = processed.get(field)
+            if val is None:
+                logger.debug(f"Listing not valuation eligible. Missing: {field}. Title: {processed.get('title')}")
+                return False
+            if field == "area_sqm" and val <= 0:
+                logger.debug(f"Listing not valuation eligible. Invalid area_sqm: {val}. Title: {processed.get('title')}")
+                return False
         
-        if not missing:
-            return True
-            
-        logger.debug(f"Listing not valuation eligible. Missing: {missing}. Title: {processed.get('title')}")
-        return False
+        return True

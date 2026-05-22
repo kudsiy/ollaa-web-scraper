@@ -329,10 +329,21 @@ class AmharicParser:
             '፺': 90, '፻': 100, '፼': 10000
         }
         
+        # Enhanced extraction for area-specific patterns
+        area_pattern = re.compile(r'([\d,]+\.?\d*)\s*(?:ካሬ|ካሬ\s*ሜትር|sqm|sq\.m|m2|M2)', re.IGNORECASE)
+        area_matches = area_pattern.findall(text)
+        for val in area_matches:
+            try:
+                numbers.append(float(val.replace(',', '')))
+            except ValueError:
+                continue
+
         english_nums = re.findall(r'[\d,]+\.?\d*', text)
         for num in english_nums:
             try:
-                numbers.append(float(num.replace(',', '')))
+                val = float(num.replace(',', ''))
+                if val not in numbers:
+                    numbers.append(val)
             except ValueError:
                 continue
                 
@@ -359,3 +370,9 @@ class AmharicParser:
             if self.normalize_text(keyword).lower() in normalized_text:
                 return True
         return False
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'

@@ -185,7 +185,7 @@ SOURCE_REGISTRY = {
     },
     "egp": {
         "name": "eGP Ethiopia",
-        "url": "https://egp.ppa.gov.et/egp/bids/published",
+        "url": "https://egp.gov.et/egp/bids/published",
         "category": "institutional_auctions",
         "valuation_signal": "primary_auction",
         "scrapability": "medium",
@@ -211,7 +211,7 @@ SOURCE_REGISTRY = {
     # 3. Banking & Institutional Auction Sources
     "abyssinia": {
         "name": "Bank of Abyssinia",
-        "url": "https://www.bankofabyssinia.com",
+        "url": "https://www.bankofabyssinia.com/የሐራጅ-ሽያጭ-ማስታወቂያ",
         "category": "institutional_auctions",
         "valuation_signal": "primary_auction",
         "scrapability": "medium",
@@ -219,7 +219,7 @@ SOURCE_REGISTRY = {
     },
     "amhara": {
         "name": "Amhara Bank",
-        "url": "https://www.amharabank.com.et",
+        "url": "https://www.amharabank.com.et/bids-and-tenders",
         "category": "institutional_auctions",
         "valuation_signal": "primary_auction",
         "scrapability": "medium",
@@ -227,7 +227,7 @@ SOURCE_REGISTRY = {
     },
     "cbe": {
         "name": "Commercial Bank of Ethiopia",
-        "url": "https://www.combanketh.et",
+        "url": "https://www.combanketh.et/en/notices/auction",
         "category": "institutional_auctions",
         "valuation_signal": "primary_auction",
         "scrapability": "high",
@@ -235,7 +235,7 @@ SOURCE_REGISTRY = {
     },
     "awash": {
         "name": "Awash Bank",
-        "url": "https://awashbank.com",
+        "url": "https://awashbank.com/news",
         "category": "institutional_auctions",
         "valuation_signal": "primary_auction",
         "scrapability": "medium",
@@ -243,7 +243,7 @@ SOURCE_REGISTRY = {
     },
     "dashen": {
         "name": "Dashen Bank",
-        "url": "https://dashenbanksc.com",
+        "url": "https://dashenbanksc.com/bids-tenders",
         "category": "institutional_auctions",
         "valuation_signal": "primary_auction",
         "scrapability": "medium",
@@ -251,7 +251,7 @@ SOURCE_REGISTRY = {
     },
     "berhan": {
         "name": "Berhan Bank",
-        "url": "https://berhanbanksc.com",
+        "url": "https://berhanbanksc.com/news",
         "category": "institutional_auctions",
         "valuation_signal": "primary_auction",
         "scrapability": "medium",
@@ -259,7 +259,7 @@ SOURCE_REGISTRY = {
     },
     "zemen": {
         "name": "Zemen Bank",
-        "url": "https://www.zemenbank.com",
+        "url": "https://www.zemenbank.com/news",
         "category": "institutional_auctions",
         "valuation_signal": "primary_auction",
         "scrapability": "medium",
@@ -267,7 +267,7 @@ SOURCE_REGISTRY = {
     },
     "coop": {
         "name": "Cooperative Bank of Oromia",
-        "url": "https://coopbankoromia.com.et",
+        "url": "https://coopbankoromia.com.et/news",
         "category": "institutional_auctions",
         "valuation_signal": "primary_auction",
         "scrapability": "medium",
@@ -308,3 +308,15 @@ def iter_sources(category=None, status=None):
         if status and config.get("status") != status:
             continue
         yield key, config
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'

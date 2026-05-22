@@ -98,15 +98,39 @@ class KeywordBankScraper(BaseScraper):
             if len(title) < 5:
                 return None
                 
-            price = self._extract_price(element.get_text())
+            text = element.get_text(separator=" ", strip=True)
+            price = self._extract_price(text)
             
-            # Look for location (often near keywords like 'አድራሻ' or city names)
+            # Look for location and area (often near keywords)
             location = None
-            text = element.get_text()
-            loc_match = re.search(r'(?:አድራሻ|ቦታ)[:\s]+([^,\n\.]+)', text)
-            if loc_match:
-                location = loc_match.group(1).strip()
+            area_sqm = None
             
+            # Search in tables for specific fields (common in bank notices)
+            for table in element.select('table'):
+                for tr in table.select('tr'):
+                    tds = tr.select('td, th')
+                    if len(tds) >= 2:
+                        key = tds[0].get_text(strip=True).lower()
+                        val = tds[1].get_text(strip=True)
+                        if any(k in key for k in ['area', 'ስፋት', 'ካሬ']):
+                            m = re.search(r'(\d+(?:\.\d+)?)', val)
+                            if m:
+                                try: area_sqm = float(m.group(1).replace(',', ''))
+                                except: pass
+                        elif any(k in key for k in ['location', 'address', 'አድራሻ', 'ቦታ']):
+                            location = val
+
+            if not location:
+                loc_match = re.search(r'(?:አድራሻ|ቦታ)[:\s]+([^,\n\.]+)', text)
+                if loc_match:
+                    location = loc_match.group(1).strip()
+            
+            if not area_sqm:
+                area_match = re.search(r'(?:Area|ስፋት|ካሬ)[:\s]+([\d,]+)', text, re.I)
+                if area_match:
+                    try: area_sqm = float(area_match.group(1).replace(',', ''))
+                    except: pass
+
             link_elem = element.select_one('a[href]')
             source_url = current_url
             if link_elem and link_elem.get('href'):
@@ -115,9 +139,10 @@ class KeywordBankScraper(BaseScraper):
             
             return self.create_listing(
                 title=title,
-                description=text[:500], # Keep first 500 chars as description
+                description=text[:1000],
                 price=price,
                 location=location,
+                area_sqm=area_sqm,
                 source_url=source_url,
                 listing_type="auction",
                 raw_data={"element_html": str(element)[:1000]}
@@ -143,3 +168,9 @@ class KeywordBankScraper(BaseScraper):
                 except ValueError:
                     pass
         return None
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
