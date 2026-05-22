@@ -235,9 +235,9 @@ SOURCE_REGISTRY = {
     },
     "awash": {
         "name": "Awash Bank",
-        "url": "https://awashbank.com/news",
+        "url": "https://www.awashbank.com",
         "news_path": "/news",
-        "bids_path": "/bids",
+        "bids_path": "/bids-and-tenders",
         "auction_path": "/auction",
         "category": "institutional_auctions",
         "valuation_signal": "primary_auction",
@@ -254,7 +254,7 @@ SOURCE_REGISTRY = {
     },
     "berhan": {
         "name": "Berhan Bank",
-        "url": "https://berhanbanksc.com/news",
+        "url": "https://www.berhanbanksc.com",
         "news_path": "/news",
         "bids_path": "/bids-and-tenders",
         "auction_path": "/auction",
@@ -265,9 +265,9 @@ SOURCE_REGISTRY = {
     },
     "zemen": {
         "name": "Zemen Bank",
-        "url": "https://www.zemenbank.com/news",
+        "url": "https://www.zemenbank.com",
         "news_path": "/news",
-        "bids_path": "/bids",
+        "bids_path": "/bids-and-tenders",
         "auction_path": "/auction",
         "category": "institutional_auctions",
         "valuation_signal": "primary_auction",
@@ -317,15 +317,4 @@ def iter_sources(category=None, status=None):
         if status and config.get("status") != status:
             continue
         yield key, config
-/home/engine/.bashrc: line 1: syntax error near unexpected token `('
-/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
-/home/engine/.bashrc: line 1: syntax error near unexpected token `('
-/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
-/home/engine/.bashrc: line 1: syntax error near unexpected token `('
-/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
-/home/engine/.bashrc: line 1: syntax error near unexpected token `('
-/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
-/home/engine/.bashrc: line 1: syntax error near unexpected token `('
-/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
-/home/engine/.bashrc: line 1: syntax error near unexpected token `('
-/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+
