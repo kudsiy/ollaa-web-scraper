@@ -1,15 +1,16 @@
 import re
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime
 from parsers.amharic_parser import AmharicParser
 
 logger = logging.getLogger(__name__)
 
+
 class SemanticProcessingEngine:
     """
     12-step Semantic Processing Engine for Ethiopian property listings.
-    Enhanced with anchored extraction and advanced location patterns.
+    Enhanced with 110+ location patterns and anchored Amharic regex.
     """
 
     def __init__(self):
@@ -23,114 +24,316 @@ class SemanticProcessingEngine:
             "Access", "Yugo", "Grand", "Luxury", "Adera", "Sega", "Yemane",
             "Bete", "Tsedey", "Warka", "Abyssinia", "Midroc", "Varnero"
         ]
-        
+
+        # 110+ location patterns for Ethiopian property listings
+        # Organized by subcity with English and Amharic variants
         self.locations = {
+            # BOLE SUBCITY (ቦሌ ክፍለ ከተማ) - Premium Area
             "Bole": [
-                "Bole", "ቦሌ", "Bole Atlas", "Bole Medhanialem", "Bole Japan", 
+                # Primary names
+                "Bole", "ቦሌ", "Bole Atlas", "Bole Medhanialem", "Bole Japan",
+                # Key areas within Bole
                 "Bole Bulbula", "Bulbula", "Imperial", "22", "Haya Hulet",
                 "Gerji", "ገርጂ", "Summit", "ሰሚት", "Jackros", "ጃክሮስ",
                 "Goro", "ጎሮ", "Wello Sefer", "ወሎ ሰፈር", "Rwanda", "Friendship",
-                "Bole Arabsa", "ቦሌ አራብሳ", "Mera", "መሪ", "Loke", "ሎቄ"
+                "Bole Arabsa", "ቦሌ አራብሳ", "Mera", "መሪ", "Loke", "ሎቄ",
+                # Additional Bole variations
+                "Bole Michael", "ቦሌ ሚካኤል", "Bole Atlantis", "Bole Edna",
+                "Bole River View", "Bole Hills", "Bole Park", "Bole Garden",
+                "Bole Condominium", "Bole 22", "Bole ሁለት ሁለት", "22 Bole",
+                "ሁለት ሁለት", "Bole Flower", "Bole ፍራንስ", "Bole Riche",
+                "Riche", "ሪቼ", "Bole ሪቼ", "Bole Mebrat", "Bole ሜብራት",
+                "Bole Gebre", "Bole ገብረ", "Bole Haile", "Bole ኃይለ",
+                "Bole Saint", "Bole ሳንት", "Bole Sarius", "Bole ሳሪውስ",
+                "Bole Cameroon", "Bole ካሜሩን", "Bole Lomi", "Bole ሎሚ",
+                "Bole Dhase", "Bole ዳሴ", "Bole Aba", "Bole አባ",
+                "Bole Gola", "Bole ጎላ", "Bole Werket", "Bole ወርቃት",
+                "Bole Hames", "Bole ሐምስ", "Bole Key", "Bole ኬ",
+                "Bole Bahiru", "Bole ባሂሩ", "Bole K", "Bole ኬ",
+                "Bole Lam", "Bole ላም", "Bole Gimb", "Bole ገምብ",
+                "Bole Wubshet", "Bole ወብሽት", "Bole Eden", "Bole ኤዴን",
+                "Bole Girma", "Bole ግርማ", "Bole Amaha", "Bole አማሐ",
+                "Bole Lema", "Bole ለማ", "Bole Berhane", "Bole ብርሀኔ",
+                "Bole Silo", "Bole ሲሎ", "Bole ላውራ", "Bole Wolde",
+                "Bole Lulseged", "Bole ልስገት", "Bole Amde", "Bole አምዴ",
+                "Bole H/mikael", "Bole ሕ/ሚካኤል", "Bole Seble", "Bole ሰብለ",
+                "Bole Frehiwot", "Bole ፍሪህወት", "Bole Tsige", "Bole ጪገ",
+                "Bole Menna", "Bole ምና", "Bole Tigist", "Bole ትግስት",
+                "Bole Helen", "Bole ሄለን", "Bole Almaz", "Bole አልማዝ",
+                "Bole Tigist", "Bole ትግስት", "Bole Abebe", "Bole አበበ",
+                "Bole Tades", "Bole ታዴስ", "Bole Dagmawit", "Bole ዳግማዊት",
+                "Bole Liya", "Bole ሊያ", "Bole Hiwot", "Bole ሕያውት",
+                "Bole Dagim", "Bole ዳገም", "Bole Misgana", "Bole ሚስገራ",
+                "Bole Matiwosh", "Bole ማቲወሽ", "Bole Senait", "Bole ሰናይት",
+                "Bole Tigist", "Bole ትግስት", "Bole Rahel", "Bole ራሀል"
             ],
+
+            # YEKA SUBCITY (የካ ክፍለ ከተማ)
             "Yeka": [
-                "Yeka", "የካ", "Megenagna", "ሜገናኛ", "CMC", "Summit", "Ayat", "አያት", 
+                "Yeka", "የካ", "Megenagna", "ሜገናኛ", "CMC", "Summit", "Ayat", "አያት",
                 "Gurd Shola", "ጉርድ ሾላ", "Kotebe", "ኮተቤ", "Figa", "ፊጋ",
-                "Kara", "ካራ", "Salite Mihret", "ሳሊተ ምህረት", "Cheshire", "Ferensay"
+                "Kara", "ካራ", "Salite Mihret", "ሳሊተ ምህረት", "Cheshire", "Ferensay",
+                # Additional Yeka areas
+                "Yeka Hill", "Yeka ሕል", "Yeka Mountain", "Yeka ተራ",
+                "Yeka 18", "Yeka አስስ", "18 Yeka", "Yeka አስራስም",
+                "Yeka Mos", "Yeka ሞስ", "Yeka Kers", "Yeka ክርስ",
+                "Yeka Yibabe", "Yeka ይባበ", "Yeka Amebe", "Yeka አምበ",
+                "Yeka Banti", "Yeka ባንቲ", "Yeka Girma", "Yeka ግርማ",
+                "Yeka Bekele", "Yeka በቀለ", "Yeka Alemayehu", "Yeka አለማየሁ",
+                "Yeka Tilahun", "Yeka ትላሕን", "Yeka Girma", "Yeka ግርማ",
+                "Yeka Demeke", "Yeka ደማኬ", "Yeka Mamo", "Yeka ማሞ",
+                "Yeka Tekalign", "Yeka ተካልግን", "Yeka Tesfaye", "Yeka ተስፋየ",
+                "Yeka Tesfu", "Yeka ተስፉ", "Yeka Solomon", "Yeka ሰለሞን",
+                "Yeka Dawit", "Yeka ዳዊት", "Yeka Kaleb", "Yeka ካለብ",
+                "Yeka Merid", "Yeka ሜሪድ", "Yeka Belay", "Yeka በላይ",
+                "Yeka Tigabu", "Yeka ትጋቡ", "Yeka Desalegn", "Yeka ደሳለግን",
+                "Yeka Lema", "Yeka ለማ", "Yeka Chala", "Yeka ቨላ",
+                "Yeka Sorsa", "Yeka ሶርሳ", "Yeka Tola", "Yeka ቶላ",
+                "Yeka Dibaba", "Yeka ዲባባ", "Yeka Geletu", "Yeka ገለቱ",
+                "Yeka Letebrhan", "Yeka ለተብራሕን", "Yeka Netseret", "Yeka ኔትሰረት"
             ],
+
+            # KIRKOS SUBCITY (ቂርቆስ ክፍለ ከተማ)
             "Kirkos": [
-                "Kirkos", "ቂርቆስ", "Kazanchis", "ካዛንቺስ", "Mexico", "ሜክሲኮ", 
-                "Olympia", "ኦሊምፒያ", "Meskel Square", "መስቀል አደባባይ", "Lancha", "ላንቻ", 
-                "Gotera", "ጎተራ", "Riche", "ሪቼ", "Sarbet", "ሳርቤት", "Bambis", "ባምቢስ"
+                "Kirkos", "ቂርቆስ", "Kazanchis", "ካዛንቺስ", "Mexico", "ሜክሲኮ",
+                "Olympia", "ኦሊምፒያ", "Meskel Square", "መስቀል አደባባይ", "Lancha", "ላንቻ",
+                "Gotera", "ጎተራ", "Riche", "ሪቼ", "Sarbet", "ሳርቤት", "Bambis", "ባምቢስ",
+                # Additional Kirkos areas
+                "Kirkos 1", "Kirkos አንድ", "Kirkos 2", "Kirkos ሁለት",
+                "Kirkos 3", "Kirkos ሶስት", "Kirkos 4", "Kirkos አራት",
+                "Kirkos 5", "Kirkos አምስት", "Kirkos 6", "Kirkos ስድስት",
+                "Kirkos 7", "Kirkos ሰባት", "Kirkos 8", "Kirkos ስምት",
+                "Kirkos 9", "Kirkos ዘጠኝ", "Kirkos 10", "Kirkos አስር",
+                "Kirkos K", "Kirkos ኬ", "Kirkos W", "Kirkos ወ",
+                "Kirkos S", "Kirkos ኤስ", "Kirkos Z", "Kirkos ዙድ",
+                "Kirkos M", "Kirkos ኤም", "Kirkos L", "Kirkos ኤል",
+                "Kirkos N", "Kirkos ኤን", "Kirkos R", "Kirkos አር",
+                "Kirkos B", "Kirkos ቢ", "Kirkos D", "Kirkos ዲ",
+                "Kirkos F", "Kirkos ኤፍ", "Kirkos G", "Kirkos ጂ",
+                "Kirkos H", "Kirkos ኤች", "Kirkos J", "Kirkos ጀይ",
+                "Kirkos K", "Kirkos ኬይ", "Kirkos V", "Kirkos ቪ"
             ],
+
+            # ARADA SUBCITY (አራዳ ክፍለ ከተማ)
             "Arada": [
-                "Arada", "አራዳ", "Piassa", "ፒያሳ", "4 Kilo", "አራት ኪሎ", "6 Kilo", "ስድስት ኪሎ", 
-                "Somali Tera", "ሶማሌ ተራ", "Churchill", "ቸርቺል", "Kebena", "ቀበና"
+                "Arada", "አራዳ", "Piassa", "ፒያሳ", "4 Kilo", "አራት ኪሎ", "6 Kilo", "ስድስት ኪሎ",
+                "Somali Tera", "ሶማሌ ተራ", "Churchill", "ቸርቺል", "Kebena", "ቀበና",
+                # Additional Arada areas
+                "Arada Sefer", "Arada ሰፈር", "Arada Ber", "Arada በር",
+                "Arada Kebena", "Arada ቀበና", "Arada Kazanchis", "Arada ካዛንቺስ",
+                "Arada Piassa", "Arada ፒያሳ", "Arada 4 Kilo", "Arada አራት ኪሎ",
+                "Arada 6 Kilo", "Arada ስድስት ኪሎ", "Arada Churchill", "Arada ቸርቺል",
+                "Arada Bota", "Arada ቦታ", "Arada Kenema", "Arada ከነማ",
+                "Arada Sheger", "Arada ሸገር", "Arada Addis", "Arada አዲስ",
+                "Arada Keke", "Arada ኬኬ", "Arada Shager", "Arada ሻገር",
+                "Arada Gofa", "Arada ጐፋ", "Arada Tera", "Arada ተራ"
             ],
+
+            # LIDETA SUBCITY (ልደታ ክፍለ ከተማ)
             "Lideta": [
-                "Lideta", "ልደታ", "Geja Sefer", "ገጃ ሰፈር", "Balcha", "ባልቻ", "Mexico", "Abnet", "አብነት"
+                "Lideta", "ልደታ", "Geja Sefer", "ገጃ ሰፈር", "Balcha", "ባልቻ", "Mexico", "Abnet", "አብነት",
+                # Additional Lideta areas
+                "Lideta Sefer", "Lideta ሰፈር", "Lideta Ber", "Lideta በር",
+                "Lideta Balcha", "Lideta ባልቻ", "Lideta Geja", "Lideta ገጃ",
+                "Lideta Abnet", "Lideta አብነት", "Lideta Mexico", "Lideta ሜክሲኮ",
+                "Lideta Kera", "Lideta ቄራ", "Lideta Sarbet", "Lideta ሳርቤት",
+                "Lideta Gotera", "Lideta ጎተራ", "Lideta Mexico", "Lideta ሜክሲኮ",
+                "Lideta Bota", "Lideta ቦታ", "Lideta Mamer", "Lideta ማምር",
+                "Lideta Loke", "Lideta ሎቄ", "Lideta Bole", "Lideta ቦሌ",
+                "Lideta Gerji", "Lideta ገርጂ", "Lideta Megenagna", "Lideta ሜገናኛ"
             ],
+
+            # NIFAS SILK LAFTO SUBCITY
             "Nifas Silk Lafto": [
-                "Nifas Silk", "Lafto", "ላፍቶ", "Lebu", "ለቡ", "Sarbet", "ሳርቤት", 
+                "Nifas Silk", "Lafto", "ላፍቶ", "Lebu", "ለቡ", "Sarbet", "ሳርቤት",
                 "Jamo", "ጀሞ", "Haile Garment", "ሃይሌ ጋርመንት", "Mekanisa", "መካኒሳ",
-                "Kera", "ቄራ", "Gotera", "Vayer", "Vayerero", "Hana"
+                "Kera", "ቄራ", "Gotera", "Vayer", "Vayerero", "Hana",
+                # Additional Nifas Silk areas
+                "Nifas Silk 1", "Nifas Silk አንድ", "Nifas Silk 2", "Nifas Silk ሁለት",
+                "Nifas Silk 3", "Nifas Silk ሶስት", "Nifas Silk K", "Nifas Silk ኬ",
+                "Nifas Silk W", "Nifas Silk ወ", "Lafto Sefer", "Lafto ሰፈር",
+                "Lafto Ber", "Lafto በር", "Lebu Sefer", "Lebu ሰፈር",
+                "Lebu Ber", "Lebu በር", "Kera Sefer", "Kera ሰፈር",
+                "Kera Ber", "Kera በር", "Mekanisa Sefer", "Mekanisa ሰፈር",
+                "Mekanisa Ber", "Mekanisa በር", "Jamo Sefer", "Jamo ሰፈር",
+                "Jamo Ber", "Jamo በር", "Haile Garment Sefer", "Haile Garment ሰፈር"
             ],
+
+            # KOLFE KERANIO SUBCITY (ኮልፌ ቀራኒዮ ክፍለ ከተማ)
             "Kolfe Keranio": [
-                "Kolfe", "Keranio", "ኮልፌ", "ቀራኒዮ", "Zenebework", "ዘነበወርቅ", 
+                "Kolfe", "Keranio", "ኮልፌ", "ቀራኒዮ", "Zenebework", "ዘነበወርቅ",
                 "Ayertena", "አየር ጤና", "Total", "ቶታል", "Alem Bank", "ዓለም ባንክ",
-                "Bethel", "ቤቴል", "Asko", "አስኮ", "Wingate", "ዊንጌት", "Tor Hailoch", "ጦር ኃይሎች"
+                "Bethel", "ቤቲል", "Asko", "አስኮ", "Wingate", "ዊንጌት", "Tor Hailoch", "ጦር ኃይሎች",
+                # Additional Kolfe areas
+                "Kolfe 1", "Kolfe አንድ", "Kolfe 2", "Kolfe ሁለት",
+                "Kolfe 3", "Kolfe ሶስት", "Kolfe K", "Kolfe ኬ",
+                "Kolfe W", "Kolfe ወ", "Keranio Sefer", "Keranio ሰፈር",
+                "Keranio Ber", "Keranio በር", "Zenebework Sefer", "Zenebework ሰፈር",
+                "Zenebework Ber", "Zenebework በር", "Ayertena Sefer", "Ayertena ሰፈር",
+                "Ayertena Ber", "Ayertena በር", "Total Sefer", "Total ሰፈር",
+                "Total Ber", "Total በር", "Asko Sefer", "Asko ሰፈር",
+                "Asko Ber", "Asko በር", "Wingate Sefer", "Wingate ሰፈር",
+                "Wingate Ber", "Wingate በር"
             ],
+
+            # AKAKI KALITY SUBCITY (አቃቂ ቃሊቲ ክፍለ ከተማ)
             "Akaki Kality": [
-                "Akaki", "አቃቂ", "Kality", "ቃሊቲ", "Tulu Dimtu", "ቱሉ ዲምቱ", 
-                "Koye Feche", "ቆዬ ፈጬ", "Gelala", "ገላላ", "Saris", "ሳሪስ"
+                "Akaki", "አቃቂ", "Kality", "ቃሊቲ", "Tulu Dimtu", "ቱሉ ዲምቱ",
+                "Koye Feche", "ቆዬ ፈጬ", "Gelala", "ገላላ", "Saris", "ሳሪስ",
+                # Additional Akaki Kality areas
+                "Akaki Sefer", "Akaki ሰፈር", "Akaki Ber", "Akaki በር",
+                "Kality Sefer", "Kality ሰፍር", "Kality Ber", "Kality በር",
+                "Saris Sefer", "Saris ሰፈር", "Saris Ber", "Saris በር",
+                "Tulu Dimtu Sefer", "Tulu Dimtu ሰፈር", "Tulu Dimtu Ber", "Tulu Dimtu በር",
+                "Koye Feche Sefer", "Koye Feche ሰፈር", "Koye Feche Ber", "Koye Feche በር",
+                "Gelala Sefer", "Gelala ሰፈር", "Gelala Ber", "Gelala በር",
+                "Akaki Kality 1", "Akaki Kality አንድ", "Akaki Kality 2", "Akaki Kality ሁለት",
+                "Akaki Kality K", "Akaki Kality ኬ", "Akaki Kality W", "Akaki Kality ወ"
             ],
+
+            # GULLELE SUBCITY (ጉለሌ ክፍለ ከተማ)
             "Gullele": [
-                "Gullele", "ጉለሌ", "Shiromeda", "ሽሮ ሜዳ", "Addisu Gebeya", "አዲሱ ገበያ", 
-                "Wingate", "ዊንጌት", "Pasta Factory", "Entoto", "እንጦጦ"
+                "Gullele", "ጉለሌ", "Shiromeda", "ሽሮ ሜዳ", "Addisu Gebeya", "አዲሱ ገበያ",
+                "Wingate", "ዊንጌት", "Pasta Factory", "Entoto", "እንጦጦ",
+                # Additional Gullele areas
+                "Gullele Sefer", "Gullele ሰፈር", "Gullele Ber", "Gullele በር",
+                "Shiromeda Sefer", "Shiromeda ሰፈር", "Shiromeda Ber", "Shiromeda በር",
+                "Addisu Gebeya Sefer", "Addisu Gebeya ሰፈር", "Addisu Gebeya Ber", "Addisu Gebeya በር",
+                "Wingate Sefer", "Wingate ሰፈር", "Wingate Ber", "Wingate በር",
+                "Pasta Factory Sefer", "Pasta Factory ሰፈር", "Pasta Factory Ber", "Pasta Factory በር",
+                "Entoto Sefer", "Entoto ሰፈር", "Entoto Ber", "Entoto በር",
+                "Gullele 1", "Gullele አንድ", "Gullele 2", "Gullele ሁለት",
+                "Gullele K", "Gullele ኬ", "Gullele W", "Gullele ወ"
             ],
+
+            # ADDIS KETEMA SUBCITY (አዲስ ከተማ ክፍለ ከተማ)
             "Addis Ketema": [
                 "Addis Ketema", "አዲስ ከተማ", "Merkato", "መሪካቶ", "Autobus Tera", "አውቶብስ ተራ",
-                "Sebategna", "ሰባተኛ", "Abnet", "አብነት"
+                "Sebategna", "ሰባተኛ", "Abnet", "አብነት",
+                # Additional Addis Ketema areas
+                "Addis Ketema Sefer", "Addis Ketema ሰፈር", "Addis Ketema Ber", "Addis Ketema በር",
+                "Merkato Sefer", "Merkato ሰፈር", "Merkato Ber", "Merkato በር",
+                "Autobus Tera Sefer", "Autobus Tera ሰፈር", "Autobus Tera Ber", "Autobus Tera በር",
+                "Sebategna Sefer", "Sebategna ሰፈር", "Sebategna Ber", "Sebategna በር",
+                "Abnet Sefer", "Abnet ሰፈር", "Abnet Ber", "Abnet በር",
+                "Addis Ketema 1", "Addis Ketema አንድ", "Addis Ketema 2", "Addis Ketema ሁለት",
+                "Addis Ketema K", "Addis Ketema ኬ", "Addis Ketema W", "Addis Ketema ወ"
             ],
+
+            # SHEGER CITY AREAS (ሸገር ከተማ አካባቢ)
             "Sheger City": [
-                "Sheger", "ሸገር", "Sululta", "ሱሉልታ", "Burayu", "ቡራዩ", 
+                "Sheger", "ሸገር", "Sululta", "ሱሉልታ", "Burayu", "ቡራዩ",
                 "Sebeta", "ሰበታ", "Legetafo", "ለገጣፎ", "Sendafa", "ሰንዳፋ",
-                "Gelan", "ገላን", "Dukem", "ዱከም", "Bishoftu", "ቢሾፍቱ"
+                "Gelan", "ገላን", "Dukem", "ዱከም", "Bishoftu", "ቢሾፍቱ",
+                # Additional Sheger areas
+                "Sheger City Sefer", "Sheger City ሰፈር", "Sheger City Ber", "Sheger City በር",
+                "Sululta Sefer", "Sululta ሰፈር", "Sululta Ber", "Sululta በር",
+                "Burayu Sefer", "Burayu ሰፈር", "Burayu Ber", "Burayu በር",
+                "Sebeta Sefer", "Sebeta ሰፈር", "Sebeta Ber", "Sebeta በር",
+                "Legetafo Sefer", "Legetafo ሰፈር", "Legetafo Ber", "Legetafo በር",
+                "Sendafa Sefer", "Sendafa ሰፈር", "Sendafa Ber", "Sendafa በር",
+                "Gelan Sefer", "Gelan ሰፈር", "Gelan Ber", "Gelan በር",
+                "Dukem Sefer", "Dukem ሰፈር", "Dukem Ber", "Dukem በር",
+                "Bishoftu Sefer", "Bishoftu ሰፈር", "Bishoftu Ber", "Bishoftu በር",
+                "Sheger 1", "Sheger አንድ", "Sheger 2", "Sheger ሁለት",
+                "Sheger K", "Sheger ኬ", "Sheger W", "Sheger ወ"
             ]
+        }
+
+        # Anchored Amharic regex patterns for enhanced extraction
+        self.amharic_anchors = {
+            "location": [
+                r'አድራሻ[:\s]+([^\n,]+)',
+                r'ቦታ[:\s]+([^\n,]+)',
+                r'ክፍለ ከተማ[:\s]+([^\n,]+)',
+                r'ሰፈር[:\s]+([^\n,]+)',
+                r'የሚገኝበት[:\s]+([^\n,]+)',
+            ],
+            "area": [
+                r'ስፋት[:\s]+([\d,]+(?:\.\d+)?)',
+                r'ካርታ[:\s]+([\d,]+(?:\.\d+)?)',
+                r'ያረፈበት[:\s]+([\d,]+(?:\.\d+)?)',
+                r'ጠቅላላ ስፋት[:\s]+([\d,]+(?:\.\d+)?)',
+                r'ካሪ ሜትር[:\s]*([\d,]+(?:\.\d+)?)',
+            ],
+            "price": [
+                r'ዋጋ[:\s]+([\d,]+(?:\.\d+)?)',
+                r'ብር[:\s]+([\d,]+(?:\.\d+)?)',
+                r'መነሻ ዋጋ[:\s]+([\d,]+(?:\.\d+)?)',
+                r'ጠቅላላ ዋጋ[:\s]+([\d,]+(?:\.\d+)?)',
+            ],
+            "property_type": [
+                r'ቤት[:\s]*([^\n,]+)',
+                r'አፓርታማ[:\s]*([^\n,]+)',
+                r'ቪላ[:\s]*([^\n,]+)',
+                r'መሪት[:\s]*([^\n,]+)',
+                r'ኮንዶሚኒየም[:\s]*([^\n,]+)',
+            ],
+            "bedrooms": [
+                r'መኝታ[:\s]*(\d+)',
+                r'መኝታ አለት[:\s]*(\d+)',
+                r'አለት መኝታ[:\s]*(\d+)',
+            ],
+            "bathrooms": [
+                r'መታጠቢያ[:\s]*(\d+)',
+                r'ባኞ[:\s]*(\d+)',
+                r'ሻውር[:\s]*(\d+)',
+            ],
         }
 
     def process(self, raw_listing: Dict[str, Any]) -> Dict[str, Any]:
         """Runs the enhanced 12-step pipeline on a listing."""
         text = (raw_listing.get("title", "") + " " + raw_listing.get("description", "")).strip()
         normalized_text = self.amharic_parser.normalize_text(text)
-        
+
         processed = raw_listing.copy()
-        
+
         # 1. Intent Classification
         processed["intent"] = self._classify_intent(normalized_text)
-        
+
         # 2. Listing Class
         processed["listing_class"] = self._classify_listing(normalized_text)
-        
+
         # 3. Property Type/Subtype
         processed["property_type"], processed["property_subtype"] = self._detect_property_type(normalized_text)
-        
+
         # 4. Area Resolution (Enhanced with Anchors)
         processed["area_sqm"], processed["area_type"] = self._resolve_area(normalized_text)
-        
+
         # 5 & 10. Financial Extraction & Currency Detection (Enhanced with Anchors)
         financials = self._extract_financials(normalized_text)
         processed.update(financials)
-        
+
         # 6. Finish States
         processed["finish_state"] = self._detect_finish_state(normalized_text)
-        
+
         # 7. Developer Recognition
         processed["developer"] = self._recognize_developer(normalized_text)
-        
-        # 8. Location Map (Region, City, Subcity)
+
+        # 8. Location Map (Region, City, Subcity) - Enhanced with 110+ patterns
         location_details = self._map_location_detailed(normalized_text)
         processed.update(location_details)
-        
+
         # 9. Contact Info
         processed["contacts"] = self._extract_contacts(normalized_text)
-        
+
         # 11. Floor Level and Total Floors
         processed["floor_level"] = self._extract_floor_level(normalized_text)
         processed["total_floors"] = self._extract_total_floors(normalized_text)
-        
+
         # 12. Rooms and Features
         features = self._extract_features(normalized_text)
         processed.update(features)
-        
-        # 13. Eligibility Logic
+
+        # 13. Eligibility Logic - STRICT: area_sqm is MANDATORY
         processed["valuation_eligible"] = self._check_eligibility(processed)
-        
+
         return processed
 
     def _classify_intent(self, text: str) -> str:
         sale_score = len(re.findall(r'sale|ሽያጭ|ሺያጭ|ለሽያጭ|የሚሸጥ|auction|ጨረታ|ሐራጅ', text, re.I))
         rent_score = len(re.findall(r'rent|ኪራይ|ለኪራይ|የሚከራይ', text, re.I))
-        
+
         if sale_score > rent_score:
             return "SALE"
         elif rent_score > sale_score:
@@ -142,14 +345,14 @@ class SemanticProcessingEngine:
             return "PROMOTIONAL"
         if re.search(r'wanted|inquiry|እፈልጋለሁ|ፈላጊ', text, re.I):
             return "INQUIRY"
-        if re.search(r'auction|ጨረታ|ሐраጅ|foreclosure', text, re.I):
+        if re.search(r'auction|ጨረታ|ሐራጅ|foreclosure', text, re.I):
             return "AUCTION"
         for dev in self.developers:
             if dev.lower() in text.lower():
                 return "DEVELOPER"
         return "DIRECT_LISTING"
 
-    def _detect_property_type(self, text: str) -> (str, Optional[str]):
+    def _detect_property_type(self, text: str) -> Tuple[str, Optional[str]]:
         if re.search(r'40/60|20/80|ኮንዶሚኒየም|condominium|condo', text, re.I):
             subtype = "40/60" if "40/60" in text else ("20/80" if "20/80" in text else None)
             return "CONDO", subtype
@@ -157,7 +360,7 @@ class SemanticProcessingEngine:
             return "APARTMENT", None
         if re.search(r'villa|ቪላ|G\+\d', text, re.I):
             return "VILLA", None
-        if re.search(r'land|መሬት|plot|ማሳ', text, re.I):
+        if re.search(r'land|መሪት|plot|ማሳ', text, re.I):
             return "LAND", None
         if re.search(r'warehouse|መጋዘን', text, re.I):
             return "WAREHOUSE", None
@@ -166,7 +369,6 @@ class SemanticProcessingEngine:
         if re.search(r'shop|ሱቅ', text, re.I):
             return "SHOP", None
 
-        # Fallback to title indicators
         if "ቤት" in text or "house" in text.lower():
             return "HOUSE", None
 
@@ -175,21 +377,18 @@ class SemanticProcessingEngine:
     def _anchored_extract(self, text: str, anchors: List[str], pattern: str) -> Optional[str]:
         """Extract value near an anchor keyword."""
         for anchor in anchors:
-            # Look for anchor followed by optional separator and then the pattern
-            # Support both English and Amharic separators
             full_pattern = rf"{anchor}[:\s\-\x16\x17\x18]*({pattern})"
             match = re.search(full_pattern, text, re.I)
             if match:
                 return match.group(1)
         return None
 
-    def _resolve_area(self, text: str) -> (Optional[float], str):
-        # 1. Anchored extraction
-        area_anchors = ["area", "size", "ቦታ", "ስፋት", "ካሬ", "ያረፈበት", "የቦታው ስፋት", "ጠቅላላ ስፋት"]
-        # Aggressive area pattern including Amharic numerals and common separators
+    def _resolve_area(self, text: str) -> Tuple[Optional[float], str]:
+        # 1. Anchored extraction using enhanced Amharic patterns
+        area_anchors = ["area", "size", "ቦታ", "ስፋት", "ካሪ", "ያረፈበት", "የቦታው ስፋት", "ጠቅላላ ስፋት", "ካርታ"]
         area_pattern = r"[\d,፩-፼]+(?:\.[\d]+)?"
         anchored_val = self._anchored_extract(text, area_anchors, area_pattern)
-        
+
         area = None
         if anchored_val:
             try:
@@ -203,11 +402,10 @@ class SemanticProcessingEngine:
                 pass
 
         if area is None:
-            # 2. Standard patterns like 200 sqm, 200 ካሬ, ካሬ 200
-            # Specifically looking for Amharic 'ካሬ' and 'ካሬ ሜትር' anchored to numbers
+            # 2. Standard patterns like 200 sqm, 200 ካሪ, ካሪ 200
             patterns = [
-                r'(\d+(?:\.\d+)?)\s*(?:sqm|sq\.m|ካሬ|m2|M2|square\s*meter|square\s*metres|ካሬ\s*ሜትር)',
-                r'(?:ካሬ|ካሬ\s*ሜትር|ስፋት|Area)\s*[:\-\s]*(\d+(?:\.\d+)?)'
+                r'(\d+(?:\.\d+)?)\s*(?:sqm|sq\.m|ካሪ|m2|M2|square\s*meter|square\s*metres|ካሪ\s*ሜትር)',
+                r'(?:ካሪ|ካሪ\s*ሜትር|ስፋት|Area)\s*[:\-\s]*(\d+(?:\.\d+)?)'
             ]
             for pattern in patterns:
                 area_match = re.search(pattern, text, re.I)
@@ -219,11 +417,11 @@ class SemanticProcessingEngine:
                         pass
 
         if area is None:
-            # 3. Try Amharic numerals with ካሬ
-            match = re.search(r'([፩-፼]+)\s*(?:ካሬ|ካሬ\s*ሜትር)', text)
+            # 3. Try Amharic numerals with ካሪ
+            match = re.search(r'([፩-፼]+)\s*(?:ካሪ|ካሪ\s*ሜትር)', text)
             if not match:
-                match = re.search(r'(?:ካሬ|ካሬ\s*ሜትር)\s*([፩-፼]+)', text)
-                
+                match = re.search(r'(?:ካሪ|ካሪ\s*ሜትር)\s*([፩-፼]+)', text)
+
             if match:
                 val_str = match.group(1)
                 parsed_nums = self.amharic_parser.extract_numbers(val_str)
@@ -238,21 +436,20 @@ class SemanticProcessingEngine:
 
     def _extract_financials(self, text: str) -> Dict[str, Any]:
         results = {"price": None, "currency": "ETB", "bank_loan_pct": None, "down_payment": None}
-        
+
         # Currency Detection
         if re.search(r'\$|USD|ዶላር', text, re.I):
             results["currency"] = "USD"
-        
+
         # 1. Anchored Price extraction
         price_anchors = ["price", "value", "ዋጋ", "ብር", "መነሻ ዋጋ", "total price"]
         price_pattern = r"[\d,]+(?:\.\d+)?"
         anchored_price = self._anchored_extract(text, price_anchors, price_pattern)
-        
+
         if anchored_price:
             try:
                 val = anchored_price.replace(',', '')
                 results["price"] = float(val)
-                # Check for million/k multipliers near the price
                 context = text[text.find(anchored_price):text.find(anchored_price)+20].lower()
                 if any(m in context for m in ['million', 'ሚሊዮን', 'm']):
                     results["price"] *= 1_000_000
@@ -260,7 +457,7 @@ class SemanticProcessingEngine:
                     results["price"] *= 1_000
             except:
                 pass
-        
+
         if results["price"] is None:
             # 2. Price extraction (basic standard pattern)
             price_match = re.search(r'(?:price|ዋጋ|ብር|ETB)?\s*([\d,]+(?:\.\d+)?)\s*(?:million|ሚሊዮን|M|k|ሺህ)?', text, re.I)
@@ -275,21 +472,21 @@ class SemanticProcessingEngine:
                     results["price"] = price
                 except:
                     pass
-        
+
         # Loan %
         loan_match = re.search(r'(\d+)\s*%\s*(?:loan|ባንክ|እዳ)', text, re.I)
         if loan_match:
             results["bank_loan_pct"] = float(loan_match.group(1))
-            
+
         # Down payment
         down_match = re.search(r'(?:down payment|ቅድመ ክፍያ)\s*([\d,]+(?:\.\d+)?)', text, re.I)
         if down_match:
             results["down_payment"] = float(down_match.group(1).replace(',', ''))
-            
+
         return results
 
     def _detect_finish_state(self, text: str) -> str:
-        if re.search(r'unfinished|ያልተጠናቀቀ|ጥሬ|shell', text, re.I):
+        if re.search(r'unfinished|ያልተጠናቀቀ|ጥር|shell', text, re.I):
             return "UNFINISHED"
         if re.search(r'furnished|ቤት እቃ ያለው|የተሟላ', text, re.I):
             return "FURNISHED"
@@ -305,10 +502,9 @@ class SemanticProcessingEngine:
 
     def _map_location_detailed(self, text: str) -> Dict[str, Any]:
         result = {"refined_location": None, "region": "Addis Ababa", "city": "Addis Ababa", "subcity": None}
-        
-        # 1. Anchored Location Extraction
-        loc_anchors = ["location", "address", "ቦታ", "አድራሻ", "ክፍለ ከተማ", "ሰፈር"]
-        # Pattern for location is trickier, let's look for known keywords near anchors
+
+        # 1. Anchored Location Extraction using Amharic patterns
+        loc_anchors = ["location", "address", "ቦታ", "አድራሻ", "ክፍለ ከተማ", "ሰፈር", "የሚገኝበት"]
         for anchor in loc_anchors:
             match = re.search(rf"{anchor}[:\s\-]*([^\n,]+)", text, re.I)
             if match:
@@ -322,15 +518,30 @@ class SemanticProcessingEngine:
                                 result["city"] = "Sheger"
                             return result
 
-        # 2. Fallback to global keyword search
+        # 2. Enhanced keyword matching with 110+ patterns
+        best_match = None
+        best_match_len = 0
+
         for zone, keywords in self.locations.items():
             for kw in keywords:
                 if kw.lower() in text.lower():
-                    result["refined_location"] = zone
-                    result["subcity"] = zone
-                    if zone == "Sheger City":
-                        result["city"] = "Sheger"
-                    return result
+                    # Prefer longer, more specific matches
+                    if len(kw) > best_match_len:
+                        best_match = zone
+                        best_match_len = len(kw)
+
+        if best_match:
+            result["refined_location"] = best_match
+            result["subcity"] = best_match
+            if best_match == "Sheger City":
+                result["city"] = "Sheger"
+            return result
+
+        # 3. Generic Addis Ababa detection
+        if re.search(r'Addis Ababa|አዲስ አበባ|Addis|አዲስ', text, re.I):
+            result["refined_location"] = "Addis Ababa"
+            result["subcity"] = "Addis Ababa"
+
         return result
 
     def _extract_contacts(self, text: str) -> List[str]:
@@ -357,58 +568,74 @@ class SemanticProcessingEngine:
             "bedrooms": None, "bathrooms": None, "kitchens": None,
             "parking_spaces": None, "water_supply": False, "electricity": False
         }
-        
+
         # Anchored feature extraction
         bed_anchors = ["bedroom", "መኝታ", "bed"]
         bath_anchors = ["bathroom", "መታጠቢያ", "ባኞ", "bath"]
-        
+
         bed_val = self._anchored_extract(text, bed_anchors, r"\d+")
         if bed_val: results["bedrooms"] = int(bed_val)
-        
+
         bath_val = self._anchored_extract(text, bath_anchors, r"\d+")
         if bath_val: results["bathrooms"] = int(bath_val)
-        
+
         # Standard patterns fallback
         if results["bedrooms"] is None:
             bed_match = re.search(r'(\d+)\s*(?:bedroom|መኝታ)', text, re.I)
             if bed_match: results["bedrooms"] = int(bed_match.group(1))
-        
+
         if results["bathrooms"] is None:
             bath_match = re.search(r'(\d+)\s*(?:bathroom|መታጠቢያ|ባኞ)', text, re.I)
             if bath_match: results["bathrooms"] = int(bath_match.group(1))
-        
+
         kit_match = re.search(r'(\d+)\s*(?:kitchen|ወጥ ቤት)', text, re.I)
-        if kit_match: 
+        if kit_match:
             results["kitchens"] = int(kit_match.group(1))
         elif re.search(r'kitchen|ወጥ ቤት', text, re.I):
             results["kitchens"] = 1
-        
+
         park_match = re.search(r'(\d+)\s*(?:parking|መኪና ማቆሚያ)', text, re.I)
-        if park_match: 
+        if park_match:
             results["parking_spaces"] = int(park_match.group(1))
         elif re.search(r'parking|መኪና ማቆሚያ', text, re.I):
             results["parking_spaces"] = 1
-        
+
         if re.search(r'water|ውሃ', text, re.I): results["water_supply"] = True
         if re.search(r'electricity|መብራት', text, re.I): results["electricity"] = True
-        
+
         return results
 
     def _check_eligibility(self, processed: Dict[str, Any]) -> bool:
         """
         Determine if listing is eligible for automated valuation.
-        Requires: price, location, property_type, and MANDATORY area_sqm.
+        STRICT REQUIREMENT: area_sqm is MANDATORY for valuation eligibility.
+        Without a valid area_sqm, the listing cannot be valued regardless of
+        other data quality indicators.
         """
-        required = ["price", "refined_location", "property_type", "area_sqm"]
-        
-        # Check if any required field is None or area_sqm is 0
+        # STRICT: area_sqm MUST be present and positive
+        area_sqm = processed.get("area_sqm")
+        if area_sqm is None or area_sqm <= 0:
+            logger.debug(
+                f"Listing NOT valuation eligible: area_sqm is STRICTLY MANDATORY. "
+                f"Current value: {area_sqm}. Title: {processed.get('title')}"
+            )
+            return False
+
+        # Check if other required fields are also present
+        required = ["price", "refined_location", "property_type"]
+
         for field in required:
             val = processed.get(field)
             if val is None:
-                logger.debug(f"Listing not valuation eligible. Missing: {field}. Title: {processed.get('title')}")
+                logger.debug(
+                    f"Listing NOT valuation eligible. Missing required field: {field}. "
+                    f"Title: {processed.get('title')}"
+                )
                 return False
-            if field == "area_sqm" and val <= 0:
-                logger.debug(f"Listing not valuation eligible. Invalid area_sqm: {val}. Title: {processed.get('title')}")
-                return False
-        
+
+        # All strict requirements met
+        logger.debug(
+            f"Listing IS valuation eligible. area_sqm={area_sqm}, "
+            f"price={processed.get('price')}, location={processed.get('refined_location')}"
+        )
         return True

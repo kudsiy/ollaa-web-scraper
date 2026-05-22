@@ -14,13 +14,14 @@ class BerhanBankScraper(KeywordBankScraper):
             source_name="Berhan Bank",
             base_url="https://berhanbanksc.com",
             auction_paths=[
+                "/news",
+                "/bids-and-tenders",
+                "/bids",
+                "/auction",
                 "/notice",
                 "/ማስታወቂያ",
-                "/auction",
                 "/tender",
-                "/bids",
                 "/foreclosure",
-                "/property-notices",
-                "/news"
+                "/property-notices"
             ]
         )

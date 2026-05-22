@@ -14,13 +14,13 @@ class ZemenBankScraper(KeywordBankScraper):
             source_name="Zemen Bank",
             base_url="https://www.zemenbank.com",
             auction_paths=[
+                "/news",
+                "/bids",
+                "/auction",
                 "/notice",
                 "/ማስታወቂያ",
-                "/auction",
                 "/tender",
                 "/foreclosure",
-                "/property-auction",
-                "/bids",
-                "/news"
+                "/property-auction"
             ]
         )

@@ -236,6 +236,9 @@ SOURCE_REGISTRY = {
     "awash": {
         "name": "Awash Bank",
         "url": "https://awashbank.com/news",
+        "news_path": "/news",
+        "bids_path": "/bids",
+        "auction_path": "/auction",
         "category": "institutional_auctions",
         "valuation_signal": "primary_auction",
         "scrapability": "medium",
@@ -252,6 +255,9 @@ SOURCE_REGISTRY = {
     "berhan": {
         "name": "Berhan Bank",
         "url": "https://berhanbanksc.com/news",
+        "news_path": "/news",
+        "bids_path": "/bids-and-tenders",
+        "auction_path": "/auction",
         "category": "institutional_auctions",
         "valuation_signal": "primary_auction",
         "scrapability": "medium",
@@ -260,6 +266,9 @@ SOURCE_REGISTRY = {
     "zemen": {
         "name": "Zemen Bank",
         "url": "https://www.zemenbank.com/news",
+        "news_path": "/news",
+        "bids_path": "/bids",
+        "auction_path": "/auction",
         "category": "institutional_auctions",
         "valuation_signal": "primary_auction",
         "scrapability": "medium",

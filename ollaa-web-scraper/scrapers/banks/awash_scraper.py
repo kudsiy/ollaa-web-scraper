@@ -14,13 +14,13 @@ class AwashBankScraper(KeywordBankScraper):
             source_name="Awash Bank",
             base_url="https://awashbank.com",
             auction_paths=[
+                "/news",
+                "/bids",
+                "/auction",
                 "/notice",
                 "/ማስታወቂያ",
-                "/auction",
                 "/tender",
-                "/bids",
                 "/foreclosure",
-                "/property-auctions",
-                "/news"
+                "/property-auctions"
             ]
         )
