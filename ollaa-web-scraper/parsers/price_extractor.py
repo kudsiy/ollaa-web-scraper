@@ -67,10 +67,16 @@ class PriceExtractor:
                     val = float(match.group(1).replace(',', ''))
                     # Check for multipliers near the match
                     context = text[match.start():match.end()+20].lower()
-                    if any(m in context for m in ['million', 'ሚሊዮን', 'm']):
+                    if any(m in context for m in ['million', 'ሚሊዮን', 'm', 'M']):
                         val *= 1_000_000
-                    elif any(k in context for k in ['k', 'ሺህ']):
+                    elif any(k in context for k in ['k', 'K', 'ሺህ']):
                         val *= 1_000
+                    else:
+                        # 10,000 ETB minimum for non-multiplied anchored prices
+                        # Prevents bedroom counts, floor levels, or other small numbers
+                        # from being mistaken for prices
+                        if val < 10000:
+                            continue
                     return val
                 except:
                     continue
@@ -81,8 +87,8 @@ class PriceExtractor:
         Match patterns like '2.5 million ETB' or '2.5M'
         """
         patterns = [
-            r'(\d+(?:,\d{3})*(?:\.\d+)?)\s*(?:million|mio|m)\s*(?:ETB|Birr|ብር)?',
-            r'(?:ETB|Birr|ብር)\s*(\d+(?:,\d{3})*(?:\.\d+)?)\s*(?:million|mio|m)',
+            r'(\d+(?:,\d{3})*(?:\.\d+)?)\s*(?:million|mio|m|M)\s*(?:ETB|Birr|ብር)?',
+            r'(?:ETB|Birr|ብር)\s*(\d+(?:,\d{3})*(?:\.\d+)?)\s*(?:million|mio|m|M)',
             r'(\d+(?:,\d{3})*(?:\.\d+)?)\s*(?:ሚሊዮን|ሚሊየን|ሚሊዮን|ሚ)',
             r'(\d+(?:,\d{3})*(?:\.\d+)?)\s*(?:mil|mill|millions)'
         ]
@@ -102,7 +108,7 @@ class PriceExtractor:
         Match patterns like '500 thousand' or '500K'
         """
         patterns = [
-            r'(\d+(?:,\d{3})*(?:\.\d+)?)\s*(?:thousand|k)\s*(?:ETB|Birr)?',
+            r'(\d+(?:,\d{3})*(?:\.\d+)?)\s*(?:thousand|k|K)\s*(?:ETB|Birr)?',
             r'(\d+(?:,\d{3})*(?:\.\d+)?)\s*(?:ሺ|ሺህ|ሺር)'
         ]
         

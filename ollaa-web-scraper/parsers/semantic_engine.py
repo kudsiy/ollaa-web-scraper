@@ -353,10 +353,11 @@ class SemanticProcessingEngine:
         return "DIRECT_LISTING"
 
     def _detect_property_type(self, text: str) -> Tuple[str, Optional[str]]:
-        if re.search(r'40/60|20/80|ኮንዶሚኒየም|condominium|condo', text, re.I):
+        # Check specific types first (CONDO, APARTMENT, VILLA, etc.)
+        if re.search(r'40/60|20/80|ኮንዶሚኒየም|condominium|condo|የጋራ መኖሪያ', text, re.I):
             subtype = "40/60" if "40/60" in text else ("20/80" if "20/80" in text else None)
             return "CONDO", subtype
-        if re.search(r'apartment|አፓርታማ|flat|ፍላት|ስቱዲዮ|studio', text, re.I):
+        if re.search(r'apartment|አፓርታማ|flat|ፍላት|ስቱዲዮ|studio|የጋራ መኖሪያ', text, re.I):
             return "APARTMENT", None
         if re.search(r'villa|ቪላ|G\+\d', text, re.I):
             return "VILLA", None
@@ -369,9 +370,8 @@ class SemanticProcessingEngine:
         if re.search(r'shop|ሱቅ|store|ሱቅ', text, re.I):
             return "SHOP", None
 
-        # Detect house vs apartment more carefully
-        # "ቤት" (house) is very common in Amharic but may appear in context of other types
-        # Check for apartment indicators first
+        # HOUSE / ቤት detection - at the ABSOLUTE END of the chain
+        # Only match generic "house" when no other specific type matched
         if re.search(r'ቤት', text):
             # If apartment-indicative words are also present, prefer apartment
             if re.search(r'አፓርት|ሕንጻ|ህንጻ|ብልጥ|tower|ታወር|ማማ', text, re.I):
@@ -393,7 +393,7 @@ class SemanticProcessingEngine:
 
     def _resolve_area(self, text: str) -> Tuple[Optional[float], str]:
         # 1. Anchored extraction using enhanced Amharic patterns
-        area_anchors = ["area", "size", "ቦታ", "ስፋት", "ካሪ", "ያረፈበት", "የቦታው ስፋት", "ጠቅላላ ስፋት", "ካርታ"]
+        area_anchors = ["area", "size", "ስፋት", "ካሪ", "ያረፈበት", "የቦታው ስፋት", "የቦታ ስፋት", "ጠቅላላ ስፋት", "ካርታ"]
         area_pattern = r"[\d,፩-፼]+(?:\.[\d]+)?"
         anchored_val = self._anchored_extract(text, area_anchors, area_pattern)
 
@@ -410,10 +410,10 @@ class SemanticProcessingEngine:
                 pass
 
         if area is None:
-            # 2. Standard patterns like 200 sqm, 200 ካሪ, ካሪ 200
+            # 2. Standard patterns like 200 sqm, 200 ካሬ, ካሬ 200
             patterns = [
-                r'(\d+(?:\.\d+)?)\s*(?:sqm|sq\.m|ካሪ|m2|M2|square\s*meter|square\s*metres|ካሪ\s*ሜትር)',
-                r'(?:ካሪ|ካሪ\s*ሜትር|ስፋት|Area)\s*[:\-\s]*(\d+(?:\.\d+)?)'
+                r'(\d+(?:\.\d+)?)\s*(?:sqm|sq\.m|sq m|sqm\.|ካሬ|m2|M2|m²|M²|square\s*meter|square\s*metres|ካሬ\s*ሜትር)',
+                r'(?:ካሬ|ካሬ\s*ሜትር|ስፋት|Area|area)\s*[:\-\s]*(\d+(?:\.\d+)?)'
             ]
             for pattern in patterns:
                 area_match = re.search(pattern, text, re.I)
@@ -425,10 +425,10 @@ class SemanticProcessingEngine:
                         pass
 
         if area is None:
-            # 3. Try Amharic numerals with ካሪ
-            match = re.search(r'([፩-፼]+)\s*(?:ካሪ|ካሪ\s*ሜትር)', text)
+            # 3. Try Amharic numerals with ካሬ
+            match = re.search(r'([፩-፼]+)\s*(?:ካሬ|ካሬ\s*ሜትር)', text)
             if not match:
-                match = re.search(r'(?:ካሪ|ካሪ\s*ሜትር)\s*([፩-፼]+)', text)
+                match = re.search(r'(?:ካሬ|ካሬ\s*ሜትር)\s*([፩-፼]+)', text)
 
             if match:
                 val_str = match.group(1)
@@ -623,26 +623,32 @@ class SemanticProcessingEngine:
         # STRICT: area_sqm MUST be present and positive
         area_sqm = processed.get("area_sqm")
         if area_sqm is None or area_sqm <= 0:
-            logger.debug(
-                f"Listing NOT valuation eligible: area_sqm is STRICTLY MANDATORY. "
-                f"Current value: {area_sqm}. Title: {processed.get('title')}"
+            logger.info(
+                f"Valuation INELIGIBLE: area_sqm is STRICTLY MANDATORY but is "
+                f"missing or invalid (value={area_sqm}). "
+                f"Title: {processed.get('title')[:80]!r}"
             )
             return False
 
         # Check if other required fields are also present
-        required = ["price", "refined_location", "property_type"]
+        required = {"price": "price is missing", "refined_location": "location is missing", "property_type": "property type is missing"}
 
-        for field in required:
+        for field, reason in required.items():
             val = processed.get(field)
             if val is None:
-                logger.debug(
-                    f"Listing NOT valuation eligible. Missing required field: {field}. "
-                    f"Title: {processed.get('title')}"
+                logger.info(
+                    f"Valuation INELIGIBLE: {reason} (field='{field}'). "
+                    f"area_sqm={area_sqm}, "
+                    f"Title: {processed.get('title')[:80]!r}"
                 )
                 return False
 
         # All strict requirements met
-        logger.debug(
-            f"Listing IS valuation eligible. area_sqm={area_sqm}, "
-            f"price={processed.get('price')}, location={processed.get('refined_location')}"
+        logger.info(
+            f"Valuation ELIGIBLE: area_sqm={area_sqm}, "
+            f"price={processed.get('price')}, "
+            f"location={processed.get('refined_location')}, "
+            f"type={processed.get('property_type')}, "
+            f"Title: {processed.get('title')[:80]!r}"
         )
+        return True

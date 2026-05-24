@@ -60,7 +60,7 @@ class SheetsExporter:
         
         # Identity Mapping
         formatted = {
-            "id": normalized_data.get("id"),
+            "id": normalized_data.get("id") or normalized_data.get("content_hash"),
             "source_key": normalized_data.get("source_key") or raw_data.get("source_key") or normalized_data.get("source_name", "").lower().replace(" ", ""),
             "source_name": normalized_data.get("source_name"),
             "source_url": normalized_data.get("source_url"),
