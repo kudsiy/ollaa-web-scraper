@@ -21,7 +21,7 @@ class CBEScraper(PlaywrightScraper):
     Scraper for Commercial Bank of Ethiopia (CBE) foreclosure auctions.
     """
     
-    base_url = "https://www.combanketh.et"
+    base_url = "https://www.combanketh.com"
     source_name = "Commercial Bank of Ethiopia"
     
     def __init__(self):
@@ -44,12 +44,13 @@ class CBEScraper(PlaywrightScraper):
             
             # Paths to check for auction notices - prioritize known working paths
             auction_paths = [
+                "/en/notices/auction",
+                "/notices/auction",
                 "/en/notices",
                 "/notices",
                 "/am/notices",
                 "/ማስታወቂያዎች",
-                "/en/notices/auction",
-                "/en/notices/property"
+                "/en/notices/property-sale"
             ]
             
             for path in auction_paths:
@@ -108,8 +109,8 @@ class CBEScraper(PlaywrightScraper):
             # If no listings found via paths, try known CBE auction notice landing page
             if len(result.listings) == 0:
                 fallback_urls = [
-                    "https://www.combanketh.et/en/notices/auction",
-                    "https://www.combanketh.et/en/notices/property-sale",
+                    "https://www.combanketh.com/en/notices/auction",
+                    "https://www.combanketh.com/en/notices/property-sale",
                 ]
                 for fallback_url in fallback_urls:
                     if len(result.listings) >= limit:

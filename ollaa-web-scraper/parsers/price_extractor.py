@@ -57,11 +57,11 @@ class PriceExtractor:
         return None
 
     def _pattern_anchored(self, text: str) -> Optional[float]:
-        """Match anchored patterns like 'Price: 5,000,000'"""
+        """Match anchored patterns like 'Price: 5,000,000' or 'ዋጋ = 5,000,000'"""
         anchors = ["price", "value", "ዋጋ", "ብር", "መነሻ ዋጋ", "total price", "ያለበት እዳ"]
         pattern = r"([\d,]+(?:\.\d+)?)"
         for anchor in anchors:
-            match = re.search(rf"{anchor}[:\s\-\x16\x17\x18]*{pattern}", text, re.I)
+            match = re.search(rf"{anchor}[:\s\-\=\x16\x17\x18]*{pattern}", text, re.I)
             if match:
                 try:
                     val = float(match.group(1).replace(',', ''))
@@ -258,4 +258,3 @@ class PriceExtractor:
             except ValueError:
                 pass
                 
-        return (None, None)
