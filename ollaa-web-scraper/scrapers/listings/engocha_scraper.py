@@ -142,6 +142,18 @@ class EngochaScraper(PlaywrightScraper):
                             
         return listings
     
+    async def _find_listing_pages(self) -> List[str]:
+        """Find listing pages for Engocha."""
+        return [
+            f"{self.base_url}/houses-for-sale",
+            f"{self.base_url}/houses-for-rent",
+            f"{self.base_url}/apartments-for-sale",
+            f"{self.base_url}/apartments-for-rent",
+            f"{self.base_url}/land-for-sale",
+            f"{self.base_url}/commercial-for-sale",
+            f"{self.base_url}/commercial-for-rent",
+        ]
+
     def _get_pagination_pages(self, soup, base_url: str) -> List[str]:
         """Get paginated listing pages."""
         pages = []

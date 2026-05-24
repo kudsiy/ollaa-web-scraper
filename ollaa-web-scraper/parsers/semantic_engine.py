@@ -356,20 +356,28 @@ class SemanticProcessingEngine:
         if re.search(r'40/60|20/80|ኮንዶሚኒየም|condominium|condo', text, re.I):
             subtype = "40/60" if "40/60" in text else ("20/80" if "20/80" in text else None)
             return "CONDO", subtype
-        if re.search(r'apartment|አፓርታማ|flat', text, re.I):
+        if re.search(r'apartment|አፓርታማ|flat|ፍላት|ስቱዲዮ|studio', text, re.I):
             return "APARTMENT", None
         if re.search(r'villa|ቪላ|G\+\d', text, re.I):
             return "VILLA", None
-        if re.search(r'land|መሪት|plot|ማሳ', text, re.I):
+        if re.search(r'land|መሪት|plot|ማሳ|የማሳ', text, re.I):
             return "LAND", None
-        if re.search(r'warehouse|መጋዘን', text, re.I):
+        if re.search(r'warehouse|መጋዘን|godi|ጎደን', text, re.I):
             return "WAREHOUSE", None
         if re.search(r'office|ቢሮ', text, re.I):
             return "OFFICE", None
-        if re.search(r'shop|ሱቅ', text, re.I):
+        if re.search(r'shop|ሱቅ|store|ሱቅ', text, re.I):
             return "SHOP", None
 
-        if "ቤት" in text or "house" in text.lower():
+        # Detect house vs apartment more carefully
+        # "ቤት" (house) is very common in Amharic but may appear in context of other types
+        # Check for apartment indicators first
+        if re.search(r'ቤት', text):
+            # If apartment-indicative words are also present, prefer apartment
+            if re.search(r'አፓርት|ሕንጻ|ህንጻ|ብልጥ|tower|ታወር|ማማ', text, re.I):
+                return "APARTMENT", None
+            return "HOUSE", None
+        if re.search(r'house|home|townhouse', text, re.I):
             return "HOUSE", None
 
         return "HOUSE", None  # Default
@@ -377,7 +385,7 @@ class SemanticProcessingEngine:
     def _anchored_extract(self, text: str, anchors: List[str], pattern: str) -> Optional[str]:
         """Extract value near an anchor keyword."""
         for anchor in anchors:
-            full_pattern = rf"{anchor}[:\s\-\x16\x17\x18]*({pattern})"
+            full_pattern = rf"{anchor}[:\s\-\=\x16\x17\x18]*({pattern})"
             match = re.search(full_pattern, text, re.I)
             if match:
                 return match.group(1)
@@ -638,4 +646,3 @@ class SemanticProcessingEngine:
             f"Listing IS valuation eligible. area_sqm={area_sqm}, "
             f"price={processed.get('price')}, location={processed.get('refined_location')}"
         )
-        return True
