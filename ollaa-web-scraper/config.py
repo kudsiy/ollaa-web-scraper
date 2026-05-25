@@ -31,7 +31,10 @@ class ScraperConfig:
     retry_delay: float = 5.0
     user_agent: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
     batch_size: int = 100
-    fetch_limit: int = 1000
+    # FIXED: was 1000 — that was a single global cap across ALL sources,
+    # causing only ~179 listings after cross-site dedup.
+    # 10000 lets each source run to its natural max; dedup handles overlap.
+    fetch_limit: int = 10000
     start_date: str = "2024-01-01"
 
 
