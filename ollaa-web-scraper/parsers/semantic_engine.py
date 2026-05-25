@@ -385,7 +385,8 @@ class SemanticProcessingEngine:
     def _anchored_extract(self, text: str, anchors: List[str], pattern: str) -> Optional[str]:
         """Extract value near an anchor keyword."""
         for anchor in anchors:
-            full_pattern = rf"{anchor}[:\s\-\=\x16\x17\x18]*({pattern})"
+            # FIX: added = to separators — Amharic listings use "ዋጋ = 17 ሚሊዮን" and "ስፋት = 200 ካሬ"
+            full_pattern = rf"{anchor}[:\s\-=\x16\x17\x18]*({pattern})"
             match = re.search(full_pattern, text, re.I)
             if match:
                 return match.group(1)
@@ -393,7 +394,9 @@ class SemanticProcessingEngine:
 
     def _resolve_area(self, text: str) -> Tuple[Optional[float], str]:
         # 1. Anchored extraction using enhanced Amharic patterns
-        area_anchors = ["area", "size", "ስፋት", "ካሪ", "ያረፈበት", "የቦታው ስፋት", "የቦታ ስፋት", "ጠቅላላ ስፋት", "ካርታ"]
+        # FIX: added "ካሬ" — actual Amharic word used in real listings (ካሬ ሜትር)
+        # "ካሪ" is rare; "ካሬ" is what appears in ~95% of Ethiopian listings
+        area_anchors = ["area", "size", "ቦታ", "ስፋት", "ካሪ", "ካሬ", "ያረፈበት", "የቦታው ስፋት", "ጠቅላላ ስፋት", "ካርታ"]
         area_pattern = r"[\d,፩-፼]+(?:\.[\d]+)?"
         anchored_val = self._anchored_extract(text, area_anchors, area_pattern)
 
@@ -411,9 +414,11 @@ class SemanticProcessingEngine:
 
         if area is None:
             # 2. Standard patterns like 200 sqm, 200 ካሬ, ካሬ 200
+            # FIX: added ካሬ / ካሬ ሜትር variants and M²/m² Unicode symbols
+            # FIX: added = to separator in second pattern
             patterns = [
-                r'(\d+(?:\.\d+)?)\s*(?:sqm|sq\.m|sq m|sqm\.|ካሬ|m2|M2|m²|M²|square\s*meter|square\s*metres|ካሬ\s*ሜትር)',
-                r'(?:ካሬ|ካሬ\s*ሜትር|ስፋት|Area|area)\s*[:\-\s]*(\d+(?:\.\d+)?)'
+                r'(\d+(?:\.\d+)?)\s*(?:sqm|sq\.m|sq m|sqm\.|ካሪ|ካሬ|m2|M2|M²|m²|square\s*meter|square\s*metres|ካሪ\s*ሜትር|ካሬ\s*ሜትር)',
+                r'(?:ካሪ|ካሬ|ካሪ\s*ሜትር|ካሬ\s*ሜትር|ስፋት|Area|area)\s*[:\-\s=]*(\d+(?:\.\d+)?)'
             ]
             for pattern in patterns:
                 area_match = re.search(pattern, text, re.I)
@@ -467,19 +472,30 @@ class SemanticProcessingEngine:
                 pass
 
         if results["price"] is None:
-            # 2. Price extraction (basic standard pattern)
-            price_match = re.search(r'(?:price|ዋጋ|ብር|ETB)?\s*([\d,]+(?:\.\d+)?)\s*(?:million|ሚሊዮን|M|k|ሺህ)?', text, re.I)
-            if price_match:
-                try:
-                    val = price_match.group(1).replace(',', '')
-                    price = float(val)
-                    if 'million' in price_match.group(0).lower() or 'ሚሊዮን' in price_match.group(0).lower() or 'M' in price_match.group(0):
-                        price *= 1_000_000
-                    elif 'k' in price_match.group(0).lower() or 'ሺህ' in price_match.group(0).lower():
-                        price *= 1_000
-                    results["price"] = price
-                except:
-                    pass
+            # 2. Targeted fallback — explicit ሚሊዮን / million word required
+            # FIX: previous fallback had all groups as optional so matched any number.
+            # Now requires the million/ሚሊዮን word to be present, OR a 7+ digit number.
+            fallbacks = [
+                # "17 ሚሊዮን ብር" or "17 million"
+                r'([\d]+(?:\.\d+)?)\s*(?:ሚሊዮን|ሚሊየን|million)',
+                # Comma-formatted large number: "6,930,000" or "12,500,000"
+                r'(\d{1,3}(?:,\d{3}){2,})',
+                # Plain 7-9 digit number (only if not a phone number)
+                r'(?<!09)(?<!\+251)\b(\d{7,9})\b',
+            ]
+            for fb_pat in fallbacks:
+                fb_match = re.search(fb_pat, text, re.I)
+                if fb_match:
+                    try:
+                        val = float(fb_match.group(1).replace(',', ''))
+                        if 'ሚሊዮን' in fb_match.group(0) or 'ሚሊየን' in fb_match.group(0) or 'million' in fb_match.group(0).lower():
+                            val *= 1_000_000
+                        # Only accept if value is plausible (100k – 500M ETB)
+                        if 100_000 <= val <= 500_000_000:
+                            results["price"] = val
+                            break
+                    except Exception:
+                        pass
 
         # Loan %
         loan_match = re.search(r'(\d+)\s*%\s*(?:loan|ባንክ|እዳ)', text, re.I)

@@ -98,8 +98,8 @@ async def run_exporter_async():
     semaphore = asyncio.Semaphore(3)  # Run 3 scrapers concurrently to avoid resource exhaustion
 
     async def scrape_source(source_key):
-        if len(all_normalized_listings) >= fetch_limit:
-            return []
+        # No early-exit here — all sources run; dedup handles cross-site overlap.
+        # Volume is controlled by fetch_limit on each individual scraper instance.
 
         if source_key not in scraper_instances:
             logger.warning(f"No scraper implementation found for verified source: {source_key}")
@@ -147,12 +147,13 @@ async def run_exporter_async():
     tasks = [scrape_source(sk) for sk in verified_sources]
     results = await asyncio.gather(*tasks)
 
-    # Flatten results
+    # Flatten all results — deduplication handles cross-source overlaps
+    # FIX: removed premature break that discarded data from later sources
     for source_listings in results:
         all_normalized_listings.extend(source_listings)
-        if len(all_normalized_listings) >= fetch_limit:
-            all_normalized_listings = all_normalized_listings[:fetch_limit]
-            break
+    # Apply ceiling only after all sources are collected
+    if len(all_normalized_listings) > fetch_limit:
+        all_normalized_listings = all_normalized_listings[:fetch_limit]
 
     # Deduplication
     logger.info(f"Performing deduplication on {len(all_normalized_listings)} listings")

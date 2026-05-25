@@ -6,7 +6,7 @@ def test_anchored_extraction():
     engine = SemanticProcessingEngine()
     
     # Test area extraction
-    text1 = "The property size is 200 sqm and it is located in Bole."
+    text1 = "The property size is 200 sqm and it is located in Bole. Price: 15 million."
     processed1 = engine.process({"title": "Test", "description": text1})
     assert processed1["area_sqm"] == 200.0
     assert processed1["refined_location"] == "Bole"
