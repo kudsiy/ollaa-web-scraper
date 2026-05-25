@@ -32,6 +32,11 @@ class CBEScraper(PlaywrightScraper):
     def __init__(self):
         super().__init__()
         self.price_extractor = PriceExtractor()
+
+    def scrape(self) -> ScrapeResult:
+        """Synchronous wrapper required by base class."""
+        import asyncio
+        return asyncio.run(self.scrape_async())
         
     async def scrape_async(self) -> ScrapeResult:
         """
