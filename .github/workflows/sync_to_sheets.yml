@@ -30,9 +30,9 @@ jobs:
           CREDS: ${{ secrets.GOOGLE_CREDENTIALS }}
         run: |
           if [ -d ollaa-web-scraper/ollaa-web-scraper ]; then
-            echo "$CREDS" > ollaa-web-scraper/ollaa-web-scraper/credentials.json
+            printf '%s\n' "$CREDS" > ollaa-web-scraper/ollaa-web-scraper/credentials.json
           else
-            echo "$CREDS" > ollaa-web-scraper/credentials.json
+            printf '%s\n' "$CREDS" > ollaa-web-scraper/credentials.json
           fi
 
       - name: Sync data to Google Sheets
@@ -53,3 +53,9 @@ jobs:
         run: |
           rm -f ollaa-web-scraper/credentials.json
           rm -f ollaa-web-scraper/ollaa-web-scraper/credentials.json
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
+/home/engine/.bashrc: line 1: syntax error near unexpected token `('
+/home/engine/.bashrc: line 1: `. /etc/profile.d/workload-containment.shn# ~/.bashrc: executed by bash(1) for non-login shells.'
