@@ -447,29 +447,27 @@ class SemanticProcessingEngine:
 
         return area, area_type
 
-    def _extract_financials(self, text: str) -> Dict[str, Any]:
-        results = {"price": None, "currency": "ETB", "bank_loan_pct": None, "down_payment": None}
-
-        # Currency Detection
-        if re.search(r'\$|USD|ዶላር', text, re.I):
-            results["currency"] = "USD"
-
-        # 1. Anchored Price extraction
-        price_anchors = ["price", "value", "ዋጋ", "ብር", "መነሻ ዋጋ", "total price"]
-        price_pattern = r"[\d,]+(?:\.\d+)?"
-        anchored_price = self._anchored_extract(text, price_anchors, price_pattern)
-
-        if anchored_price:
+   if anchored_price:
             try:
                 val = anchored_price.replace(',', '')
                 results["price"] = float(val)
-                context = text[text.find(anchored_price):text.find(anchored_price)+20].lower()
-                if any(m in context for m in ['million', 'ሚሊዮን', 'm']):
+                
+                # Fix 3 Integration: Expanded lookaround window (-5 to +30 chars)
+                anchor_pos = text.find(anchored_price)
+                nearby = text[max(0, anchor_pos - 5): anchor_pos + 30].lower()
+                
+                # Check for million multipliers (including the missing 'ሚሊየን')
+                if any(w in nearby for w in ['ሚሊዮን', 'ሚሊየን', 'million', 'm']):
                     results["price"] *= 1_000_000
-                elif any(k in context for k in ['k', 'ሺህ']):
+                elif any(k in nearby for k in ['k', 'ሺህ']):
                     results["price"] *= 1_000
-            except:
-                pass
+
+                # Reject prices below 100,000 ETB (filters junk like bedroom/floor counts)
+                if results["price"] < 100_000:
+                    results["price"] = None
+
+            except Exception:
+                results["price"] = None
 
         if results["price"] is None:
             # 2. Targeted fallback — explicit ሚሊዮን / million word required
