@@ -188,9 +188,9 @@ class EngochaScraper(PlaywrightScraper):
                'available property', 'for sale', 'for rent', 'search',
                'menu', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'}
             if title.lower().strip() in JUNK_TITLES:
-            return None
+                return None
             if len(title) < 4:
-            return None
+                return None
             if title_elem and title_elem.name == 'a':
                 title = title_elem.get_text(strip=True)
 
