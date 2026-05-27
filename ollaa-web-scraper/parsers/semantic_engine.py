@@ -447,7 +447,7 @@ class SemanticProcessingEngine:
 
         return area, area_type
 
-   if anchored_price:
+        if anchored_price:
             try:
                 val = anchored_price.replace(',', '')
                 results["price"] = float(val)
