@@ -341,15 +341,64 @@ class SemanticProcessingEngine:
         return "SALE"  # Default
 
     def _classify_listing(self, text: str) -> str:
-        if re.search(r'promotional|discount|special offer|ቅናሽ|ፕሮሞሽን', text, re.I):
+        """
+        Classify listing type. Detects adverts, channel promos, recruitment posts,
+        developer projects, and navigation junk — not just genuine property listings.
+        """
+        # 1. Hard junk — navigation elements scraped by mistake
+        JUNK_TITLES = {
+            'home', 'filters', 'filter', 'faqs', 'faq', 'compare',
+            'available property', 'for sale', 'for rent', 'search', 'menu',
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
+        }
+        first_line = text.strip().split('\n')[0].lower().strip()
+        if first_line in JUNK_TITLES or len(text.strip()) < 20:
+            return "INVALID"
+
+        # 2. Unambiguous channel/advert signals — override everything
+        ADVERT_STRONG = [
+            r'ቻናላችንን\s*ይቀላቀሉ',
+            r'ቻናሉን\s*ይቀላቀሉ',
+            r'join\s+(?:our|the)\s+channel',
+            r'subscribe\s+to\s+our\s+channel',
+            r'forward\s+this\s+(?:message|post)',
+            r'ቻናሉን\s*share\s*አድርጉ',
+            r'የሽያጭ\s*ወኪል\s*እንፈልጋለን',
+            r'sales\s*agent\s*(?:needed|wanted|hiring)',
+            r'broker\s*(?:needed|wanted|hiring)',
+            r'we\s*(?:are\s*)?hiring\b',
+            r'top\s+performer',
+            r'congratulations?\s+to\s+(?:our|the)\s+(?:team|staff)',
+        ]
+        for pat in ADVERT_STRONG:
+            if re.search(pat, text, re.IGNORECASE | re.MULTILINE):
+                return "ADVERTISEMENT"
+
+        # 3. Promotional / discount content
+        if re.search(r'promotional|discount|special offer|ቅናሽ|ፕሮሞሽን|limited[\s\-]time', text, re.I):
             return "PROMOTIONAL"
+
+        # 4. Buyer inquiry
         if re.search(r'wanted|inquiry|እፈልጋለሁ|ፈላጊ', text, re.I):
             return "INQUIRY"
+
+        # 5. Auction / bank foreclosure
         if re.search(r'auction|ጨረታ|ሐራጅ|foreclosure', text, re.I):
             return "AUCTION"
+
+        # 6. Developer project — named developer or project launch signals
+        PROJECT_SIGNALS = [
+            r'\blaunch(?:ing)?\s+soon\b', r'\bpre[\-\s]?(?:launch|sale)\b',
+            r'\boff[\-\s]?plan\b', r'\bcoming\s+soon\b',
+            r'ቅድሚያ\s*ሽያጭ', r'ምዝገባ\s*ተጀምሯል',
+        ]
         for dev in self.developers:
             if dev.lower() in text.lower():
                 return "DEVELOPER"
+        for pat in PROJECT_SIGNALS:
+            if re.search(pat, text, re.I):
+                return "DEVELOPER"
+
         return "DIRECT_LISTING"
 
     def _detect_property_type(self, text: str) -> Tuple[str, Optional[str]]:
@@ -447,38 +496,51 @@ class SemanticProcessingEngine:
 
         return area, area_type
 
+    def _extract_financials(self, text: str) -> Dict[str, Any]:
+        """
+        Extract price, currency, loan %, and down payment from listing text.
+        Handles Amharic formats: 'ዋጋ = 17 ሚሊዮን ብር', comma numbers, plain 7-digit amounts.
+        """
+        results = {"price": None, "currency": "ETB", "bank_loan_pct": None, "down_payment": None}
+
+        # Currency detection
+        if re.search(r'\$|USD|ዶላር', text, re.I):
+            results["currency"] = "USD"
+
+        # 1. Anchored price extraction — handles "ዋጋ = 17 ሚሊዮን", "price: 5,000,000"
+        price_anchors = ["price", "value", "ዋጋ", "ብር", "መነሻ ዋጋ", "total price"]
+        price_pattern = r"[\d,]+(?:\.\d+)?"
+        anchored_price = self._anchored_extract(text, price_anchors, price_pattern)
+
         if anchored_price:
             try:
                 val = anchored_price.replace(',', '')
                 results["price"] = float(val)
-                
-                # Fix 3 Integration: Expanded lookaround window (-5 to +30 chars)
+
+                # Look up to 30 chars after the matched number for million/ሚሊዮን
                 anchor_pos = text.find(anchored_price)
                 nearby = text[max(0, anchor_pos - 5): anchor_pos + 30].lower()
-                
-                # Check for million multipliers (including the missing 'ሚሊየን')
-                if any(w in nearby for w in ['ሚሊዮን', 'ሚሊየን', 'million', 'm']):
+
+                if any(w in nearby for w in ['ሚሊዮን', 'ሚሊየን', 'million']):
                     results["price"] *= 1_000_000
-                elif any(k in nearby for k in ['k', 'ሺህ']):
+                elif any(k in nearby for k in ['ሺህ', 'thousand']):
                     results["price"] *= 1_000
 
-                # Reject prices below 100,000 ETB (filters junk like bedroom/floor counts)
+                # Reject junk values (bedroom counts, floor numbers etc.)
                 if results["price"] < 100_000:
                     results["price"] = None
 
             except Exception:
                 results["price"] = None
 
+        # 2. Fallback patterns when anchored extraction fails
         if results["price"] is None:
-            # 2. Targeted fallback — explicit ሚሊዮን / million word required
-            # FIX: previous fallback had all groups as optional so matched any number.
-            # Now requires the million/ሚሊዮን word to be present, OR a 7+ digit number.
             fallbacks = [
-                # "17 ሚሊዮን ብር" or "17 million"
+                # "17 ሚሊዮን ብር" or "17 million" — explicit million word required
                 r'([\d]+(?:\.\d+)?)\s*(?:ሚሊዮን|ሚሊየን|million)',
-                # Comma-formatted large number: "6,930,000" or "12,500,000"
+                # Comma-formatted: "6,930,000" or "12,500,000"
                 r'(\d{1,3}(?:,\d{3}){2,})',
-                # Plain 7-9 digit number (only if not a phone number)
+                # Plain 7–9 digit number, excluding phone numbers
                 r'(?<!09)(?<!\+251)\b(\d{7,9})\b',
             ]
             for fb_pat in fallbacks:
@@ -486,9 +548,9 @@ class SemanticProcessingEngine:
                 if fb_match:
                     try:
                         val = float(fb_match.group(1).replace(',', ''))
-                        if 'ሚሊዮን' in fb_match.group(0) or 'ሚሊየን' in fb_match.group(0) or 'million' in fb_match.group(0).lower():
+                        g = fb_match.group(0)
+                        if 'ሚሊዮን' in g or 'ሚሊየን' in g or 'million' in g.lower():
                             val *= 1_000_000
-                        # Only accept if value is plausible (100k – 500M ETB)
                         if 100_000 <= val <= 500_000_000:
                             results["price"] = val
                             break
