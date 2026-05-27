@@ -183,6 +183,14 @@ class EngochaScraper(PlaywrightScraper):
             date_elem = card.select_one('.date, .posted-on, .time, .listing-date, .post-date')
             
             title = title_elem.get_text(strip=True) if title_elem else "Property Listing"
+            # Skip navigation junk — website buttons, filters, FAQ elements
+            JUNK_TITLES = {'home', 'filters', 'filter', 'faqs', 'faq', 'compare',
+               'available property', 'for sale', 'for rent', 'search',
+               'menu', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'}
+            if title.lower().strip() in JUNK_TITLES:
+            return None
+            if len(title) < 4:
+            return None
             if title_elem and title_elem.name == 'a':
                 title = title_elem.get_text(strip=True)
 
