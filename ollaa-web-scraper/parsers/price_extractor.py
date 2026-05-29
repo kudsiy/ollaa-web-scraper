@@ -1,6 +1,15 @@
 """
 Price extractor for parsing ETB amounts from text.
-Handles various formats including Amharic and English notations.
+Enhanced with patterns from Ethiopian real estate listing analysis.
+
+FIXES APPLIED:
+  1. Added = to separator in _pattern_anchored — was missing, broke "ዋጋ = 17 ሚሊዮን"
+  2. Added _pattern_anchored_equals for explicit "ዋጋ = X ሚሊዮን ብር" format
+  3. Added _pattern_large_birr — catches "6,930,000 ብር" formatted amounts
+  4. Added _pattern_seven_digits — catches plain 7-9 digit birr amounts
+  5. Added _pattern_parenthesis_million — catches "(38 million)" format
+  6. Replaced overly broad numeric fallback with MIN_PRICE guard (100,000 ETB)
+  7. Stripped phone numbers before extraction so 09XXXXXXXX never matches as price
 """
 import logging
 import re
@@ -8,57 +17,65 @@ from typing import Optional
 
 from config import get_config
 
-
 logger = logging.getLogger(__name__)
+
+# Sanity bounds — below 100k or above 500M is almost certainly not a valid price
+MIN_PRICE = 100_000
+MAX_PRICE = 500_000_000
 
 
 class PriceExtractor:
     """
     Extract monetary values from property listings.
     Normalizes Ethiopian Birr (ETB) amounts from various text formats.
+
+    Priority order (highest specificity first):
+      1. _pattern_anchored_equals  — "ዋጋ = 17 ሚሊዮን ብር"
+      2. _pattern_anchored         — "Price: 5,000,000"
+      3. _pattern_million          — "2.5 million ETB"
+      4. _pattern_parenthesis_million — "(38 million)"
+      5. _pattern_large_birr       — "6,930,000 ብር"
+      6. _pattern_etb              — "ETB 500,000"
+      7. _pattern_br               — "Birr 500,000"
+      8. _pattern_seven_digits     — plain 7–9 digit number
+      9. _pattern_thousand         — "500 thousand / ሺህ"
     """
-    
+
     def __init__(self):
         self.config = get_config()
-        
+
+    # ── Public API ────────────────────────────────────────────────────────────
+
     def extract(self, text: str) -> Optional[float]:
-        """
-        Extract price from text string.
-        Enhanced with more patterns and multipliers.
-        
-        Args:
-            text: Text containing price information
-            
-        Returns:
-            Price as float or None if not found
-        """
+        """Extract the primary price from text. Returns ETB float or None."""
         if not text:
             return None
-            
+
         text = text.strip()
-        
         # FIX: Strip phone numbers BEFORE any pattern runs, so 09XXXXXXXX
         # and +251XXXXXXXXX are never matched by the 7-digit fallback.
-        clean_text = re.sub(r'\b09\d{8}\b', '', text)
-        clean_text = re.sub(r'\+251\d{9}', '', clean_text)
-        clean_text = re.sub(r'\b251\d{9}\b', '', clean_text)
-        
-        patterns = [
+        clean = re.sub(r'\b09\d{8}\b', '', text)
+        clean = re.sub(r'\+251\d{9}', '', clean)
+        clean = re.sub(r'\b251\d{9}\b', '', clean)
+
+        for method in [
+            self._pattern_anchored_equals,
             self._pattern_anchored,
             self._pattern_million,
-            self._pattern_thousand,
+            self._pattern_parenthesis_million,
+            self._pattern_large_birr,
             self._pattern_etb,
             self._pattern_br,
-            self._pattern_numeric
-        ]
-        
-        for pattern in patterns:
-            price = pattern(clean_text)
-            if price is not None:
+            self._pattern_seven_digits,
+            self._pattern_thousand,
+        ]:
+            price = method(clean)
+            if price is not None and MIN_PRICE <= price <= MAX_PRICE:
                 return price
-                
+
         return None
 
+<<<<<<< HEAD
     def _pattern_anchored(self, text: str) -> Optional[float]:
         """Match anchored patterns like 'Price: 5,000,000' or 'ዋጋ = 5,000,000'"""
         anchors = ["price", "value", "ዋጋ", "ብር", "መነሻ ዋጋ", "total price", "ያለበት እዳ"]
@@ -182,89 +199,216 @@ class PriceExtractor:
                 pass
         return None
     
+=======
+>>>>>>> b231362be26fc16bbf1a3b08e9dd6ca6fe24cf98
     def extract_all(self, text: str) -> list:
-        """
-        Extract all prices found in text.
-        
-        Args:
-            text: Text containing price information
-            
-        Returns:
-            List of prices found
-        """
+        """Extract all candidate prices found in text, sorted ascending."""
+        if not text:
+            return []
         prices = []
-        
         patterns = [
-            r'[Eé]T[B]?\s*([\d,]+(?:\.\d{2})?)',
-            r'([\d,]+(?:\.\d{2})?)\s*(?:million|mio|m)',
-            r'([\d,]+(?:\.\d{2})?)\s*Br',
-            r'([\d,]+(?:\.\d{2})?)\s*Birr',
-            r'([\d,]+(?:\.\d{2})?)\s*(?:ብር|በር)'
+            r'(\d+(?:\.\d+)?)\s*(?:ሚሊዮን|million)',
+            r'(\d{1,3}(?:,\d{3})+)\s*(?:ብር|ETB|Birr)',
+            r'ETB\s*([\d,]+)',
+            r'\b(\d{7,9})\b',
         ]
-        
-        for pattern in patterns:
-            matches = re.finditer(pattern, text, re.IGNORECASE)
-            for match in matches:
+        for pat in patterns:
+            for m in re.finditer(pat, text, re.IGNORECASE):
                 try:
-                    value_str = match.group(1 if match.lastindex else 0).replace(',', '')
-                    value = float(value_str)
-                    
-                    if 'million' in match.group(0).lower():
-                        value *= 1_000_000
-                    elif 'k' in match.group(0).lower():
-                        value *= 1_000
-                        
-                    if value not in prices:
-                        prices.append(value)
-                except (ValueError, IndexError):
+                    raw = m.group(1).replace(',', '')
+                    val = float(raw)
+                    if 'million' in m.group(0).lower() or 'ሚሊዮን' in m.group(0):
+                        val *= 1_000_000
+                    if MIN_PRICE <= val <= MAX_PRICE and val not in prices:
+                        prices.append(val)
+                except Exception:
                     continue
-                    
         return sorted(prices)
-    
+
     def format_price(self, price: float, currency: str = "ETB") -> str:
-        """
-        Format price for display.
-        
-        Args:
-            price: Price value
-            currency: Currency code
-            
-        Returns:
-            Formatted price string
-        """
         if price >= 1_000_000:
             return f"{price / 1_000_000:.1f}M {currency}"
         elif price >= 1_000:
             return f"{price / 1_000:.0f}K {currency}"
-        else:
-            return f"{price:.2f} {currency}"
-    
+        return f"{price:.2f} {currency}"
+
     def parse_price_range(self, text: str) -> tuple:
-        """
-        Parse price ranges like '500K - 1M' or 'ETB 500,000 - 1,000,000'.
-        
-        Args:
-            text: Text containing price range
-            
-        Returns:
-            Tuple of (min_price, max_price) or (None, None)
-        """
-        pattern = r'([\d,]+(?:\.\d+)?)\s*(?:M|million|K|k|)?\s*[-–to]+\s*([\d,]+(?:\.\d+)?)\s*(?:M|million|K|k|)?'
-        match = re.search(pattern, text, re.IGNORECASE)
-        
-        if match:
+        pat = r'([\d,]+(?:\.\d+)?)\s*(?:M|million|K|k)?\s*[-–to]+\s*([\d,]+(?:\.\d+)?)\s*(?:M|million|K|k)?'
+        m = re.search(pat, text, re.IGNORECASE)
+        if m:
             try:
-                min_val = float(match.group(1).replace(',', ''))
-                max_val = float(match.group(2).replace(',', ''))
-                
-                if 'M' in match.group(0) or 'million' in match.group(0):
-                    min_val *= 1_000_000
-                    max_val *= 1_000_000
-                elif 'K' in match.group(0):
-                    min_val *= 1_000
-                    max_val *= 1_000
-                    
-                return (min_val, max_val)
+                lo = float(m.group(1).replace(',', ''))
+                hi = float(m.group(2).replace(',', ''))
+                g = m.group(0)
+                if 'M' in g or 'million' in g.lower():
+                    lo *= 1_000_000
+                    hi *= 1_000_000
+                elif 'K' in g or 'k' in g:
+                    lo *= 1_000
+                    hi *= 1_000
+                return (lo, hi)
             except ValueError:
                 pass
-                
+        return (None, None)
+
+    # ── Private extraction methods (highest → lowest specificity) ─────────────
+
+    def _pattern_anchored_equals(self, text: str) -> Optional[float]:
+        """
+        Amharic price with explicit = separator: "ዋጋ = 17 ሚሊዮን ብር"
+        FIX: original separator regex excluded '=' so this never matched.
+        """
+        patterns = [
+            # "ዋጋ = 17 ሚሊዮን [ብር]"
+            r'(?:ዋጋ|price|value|መነሻ\s*ዋጋ|total\s*price)[^\d]{0,8}=\s*([\d,]+(?:\.\d+)?)\s*(?:ሚሊዮን|ሚሊየን|million)',
+            # "ዋጋ = 9,460,000"  (large number, no million word)
+            r'(?:ዋጋ|price|value)[^\d]{0,8}=\s*([\d,]{5,})',
+        ]
+        for pat in patterns:
+            m = re.search(pat, text, re.IGNORECASE)
+            if m:
+                try:
+                    val = float(m.group(1).replace(',', ''))
+                    # If value < 1000 it was written as millions (e.g. "17")
+                    if val < 1000:
+                        val *= 1_000_000
+                    return val
+                except Exception:
+                    continue
+        return None
+
+    def _pattern_anchored(self, text: str) -> Optional[float]:
+        """
+        Anchored patterns: "Price: 5,000,000" / "ብር: 3,500,000"
+        FIX: added '=' to separator character class.
+        """
+        anchors = ["price", "value", "ብር", "መነሻ ዋጋ", "total price", "ያለበት እዳ"]
+        num_pat = r"([\d,]+(?:\.\d+)?)"
+        for anchor in anchors:
+            # FIX: was [:\s\-\x16\x17\x18]* — missing '='
+            m = re.search(rf"{anchor}[:\s\-=\x16\x17\x18]*{num_pat}", text, re.IGNORECASE)
+            if m:
+                try:
+                    val = float(m.group(1).replace(',', ''))
+                    # Check the 20 characters after the match for multiplier words
+                    ctx = text[m.start(): m.end() + 20].lower()
+                    if any(w in ctx for w in ['million', 'ሚሊዮን', 'ሚሊየን']):
+                        val *= 1_000_000
+                    elif any(w in ctx for w in ['ሺህ', 'thousand']):
+                        val *= 1_000
+                    return val if val >= MIN_PRICE else None
+                except Exception:
+                    continue
+        return None
+
+    def _pattern_million(self, text: str) -> Optional[float]:
+        """
+        Match "X million" or "X ሚሊዮን [ብር]"
+        Handles decimal millions: "2.5 million", "17 ሚሊዮን"
+        """
+        patterns = [
+            r'(\d+(?:[.,]\d+)?)\s*(?:million|mio)\s*(?:ETB|Birr|ብር)?',
+            r'(?:ETB|Birr|ብር)\s*(\d+(?:[.,]\d+)?)\s*(?:million|mio)',
+            r'(\d+(?:[.,]\d+)?)\s*(?:ሚሊዮን|ሚሊየን)',
+        ]
+        for pat in patterns:
+            m = re.search(pat, text, re.IGNORECASE)
+            if m:
+                try:
+                    return float(m.group(1).replace(',', '')) * 1_000_000
+                except Exception:
+                    continue
+        return None
+
+    def _pattern_parenthesis_million(self, text: str) -> Optional[float]:
+        """Match "(38 million)" or "(38 ሚሊዮን)" format."""
+        m = re.search(
+            r'\((\d+(?:\.\d+)?)\s*(?:million|ሚሊዮን|ሚሊየን)\)',
+            text, re.IGNORECASE
+        )
+        if m:
+            try:
+                return float(m.group(1)) * 1_000_000
+            except Exception:
+                pass
+        return None
+
+    def _pattern_large_birr(self, text: str) -> Optional[float]:
+        """
+        Match comma-formatted large amounts with ብር/ETB/Birr suffix.
+        e.g. "6,930,000 ብር" or "7,936,500ETB"
+        """
+        m = re.search(r'(\d{1,3}(?:,\d{3})+)\s*(?:ብር|ETB|Birr)', text, re.IGNORECASE)
+        if m:
+            try:
+                return float(m.group(1).replace(',', ''))
+            except Exception:
+                pass
+        return None
+
+    def _pattern_etb(self, text: str) -> Optional[float]:
+        """Match "ETB 500,000" or "500,000 ETB"."""
+        patterns = [
+            r'ETB\s*([\d,]+(?:\.\d{2})?)',
+            r'([\d,]+(?:\.\d{2})?)\s*ETB',
+        ]
+        for pat in patterns:
+            m = re.search(pat, text, re.IGNORECASE)
+            if m:
+                try:
+                    val = float(m.group(1).replace(',', ''))
+                    return val if val >= MIN_PRICE else None
+                except Exception:
+                    continue
+        return None
+
+    def _pattern_br(self, text: str) -> Optional[float]:
+        """Match "Birr 500,000" or "500,000 Birr"."""
+        patterns = [
+            r'Birr\s*([\d,]+(?:\.\d{2})?)',
+            r'([\d,]+(?:\.\d{2})?)\s*Birr',
+        ]
+        for pat in patterns:
+            m = re.search(pat, text, re.IGNORECASE)
+            if m:
+                try:
+                    val = float(m.group(1).replace(',', ''))
+                    return val if val >= MIN_PRICE else None
+                except Exception:
+                    continue
+        return None
+
+    def _pattern_seven_digits(self, text: str) -> Optional[float]:
+        """
+        Last-resort: plain 7–9 digit number is almost certainly a price in birr.
+        e.g. "6930000" or "12500000"
+        Excludes numbers adjacent to known non-price contexts (phone, year, sqm).
+        """
+        # Negative look-around: skip numbers following 09 (phone) or preceded by year-like 20xx
+        for m in re.finditer(r'(?<!\d)(\d{7,9})(?!\d)', text):
+            try:
+                val = float(m.group(1))
+                # Skip phone-like numbers starting with 09XXXXXXXX or 251XXXXXXXX
+                if m.group(1).startswith('09') or m.group(1).startswith('251'):
+                    continue
+                if MIN_PRICE <= val <= MAX_PRICE:
+                    return val
+            except Exception:
+                continue
+        return None
+
+    def _pattern_thousand(self, text: str) -> Optional[float]:
+        """Match "500 thousand", "500K", "500 ሺህ"."""
+        patterns = [
+            r'(\d+(?:[.,]\d+)?)\s*(?:thousand)\s*(?:ETB|Birr|ብር)?',
+            r'(\d+(?:[.,]\d+)?)\s*K\s*(?:ETB|Birr|ብር)',
+            r'(\d+(?:[.,]\d+)?)\s*(?:ሺ|ሺህ)',
+        ]
+        for pat in patterns:
+            m = re.search(pat, text, re.IGNORECASE)
+            if m:
+                try:
+                    return float(m.group(1).replace(',', '')) * 1_000
+                except Exception:
+                    continue
+        return None

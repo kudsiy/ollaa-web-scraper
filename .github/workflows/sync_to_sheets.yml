@@ -30,9 +30,9 @@ jobs:
           CREDS: ${{ secrets.GOOGLE_CREDENTIALS }}
         run: |
           if [ -d ollaa-web-scraper/ollaa-web-scraper ]; then
-            echo "$CREDS" > ollaa-web-scraper/ollaa-web-scraper/credentials.json
+            printf '%s\n' "$CREDS" > ollaa-web-scraper/ollaa-web-scraper/credentials.json
           else
-            echo "$CREDS" > ollaa-web-scraper/credentials.json
+            printf '%s\n' "$CREDS" > ollaa-web-scraper/credentials.json
           fi
 
       - name: Sync data to Google Sheets
