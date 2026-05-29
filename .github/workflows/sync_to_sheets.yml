@@ -39,6 +39,7 @@ jobs:
         env:
           GOOGLE_SHEETS_ENABLED: "true"
           GOOGLE_SHEETS_SPREADSHEET_ID: "14kN2IShbo2D9f3L-ZXO9mMaKaBvO589kHnFRwcPeSOg"
+          GOOGLE_SHEETS_SHEET_NAME: new
           PYTHONPATH: ${{ github.workspace }}/ollaa-web-scraper
         run: |
           if [ -d ollaa-web-scraper/ollaa-web-scraper ]; then
