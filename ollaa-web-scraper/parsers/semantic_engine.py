@@ -424,7 +424,15 @@ class SemanticProcessingEngine:
                 area_match = re.search(pattern, text, re.I)
                 if area_match:
                     try:
-                        area = float(area_match.group(1).replace(',', ''))
+                        val = float(area_match.group(1).replace(',', ''))
+                        # FIX: Check the 25 chars AFTER the match for a currency word.
+                        # If found, this is a price-per-sqm rate, not an actual area — discard it.
+                        match_end = area_match.end()
+                        following_text = text[match_end:match_end + 25]
+                        currency_words = ['ብር', 'ETB', 'Birr', 'birr', 'በካሬ', 'per sqm', '/sqm']
+                        if any(cw in following_text for cw in currency_words):
+                            continue
+                        area = val
                         break
                     except:
                         pass
@@ -605,8 +613,21 @@ class SemanticProcessingEngine:
 
         # Standard patterns fallback
         if results["bedrooms"] is None:
-            bed_match = re.search(r'(\d+)\s*(?:bedroom|መኝታ)', text, re.I)
-            if bed_match: results["bedrooms"] = int(bed_match.group(1))
+            # FIX: Added Amharic anchor "ባለ X መኝታ" — must match the bedroom
+            # prefix before capturing the number. Prevents sqm values (76, 166)
+            # and floor counts from being stored as bedroom counts.
+            bedroom_patterns = [
+                r'ባለ\s*(\d+)\s*(?:መኝታ)',
+                r'(\d+)\s*(?:መኝታ)\b',
+                r'(\d+)\s*bed\s*rooms?',
+                r'(\d+)\s*bhk',
+                r'(\d+)\s*br\b',
+            ]
+            for pat in bedroom_patterns:
+                bed_match = re.search(pat, text, re.I)
+                if bed_match:
+                    results["bedrooms"] = int(bed_match.group(1))
+                    break
 
         if results["bathrooms"] is None:
             bath_match = re.search(r'(\d+)\s*(?:bathroom|መታጠቢያ|ባኞ)', text, re.I)

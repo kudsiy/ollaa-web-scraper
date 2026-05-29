@@ -171,7 +171,22 @@ class EngochaScraper(PlaywrightScraper):
     def _parse_listing_card(self, card) -> Optional[ScrapedListing]:
         """Parse a listing card element."""
         try:
+            # FIX: Guard against navigation/filter pages being parsed as
+            # listings. These have very short titles and descriptions that
+            # are just comma-separated neighbourhood lists.
+            card_full_text = card.get_text(' ', strip=True)
             title_elem = card.select_one('h2, h3, h4, .title, .listing-title, .property-title, a')
+            _title_check = title_elem.get_text(strip=True) if title_elem else ''
+            _is_nav_page = (
+                len(_title_check) < 15 and
+                re.search(
+                    r'\b(Ayat|Bole|CMC|Megenagna|Summit)\s+(Bole|CMC|Summit|Ayat|Kality)',
+                    card_full_text
+                )
+            )
+            if _is_nav_page:
+                return None
+
             price_elem = card.select_one('.price, .listing-price, [class*="price"]')
             location_elem = card.select_one('.location, .address, [class*="location"], [class*="address"]')
             bedrooms_elem = card.select_one('.bedrooms, .beds, [class*="bedroom"], [class*="bed"]')

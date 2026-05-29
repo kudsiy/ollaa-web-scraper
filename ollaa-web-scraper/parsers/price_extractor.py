@@ -37,8 +37,11 @@ class PriceExtractor:
             
         text = text.strip()
         
-        # Pre-process: remove some common confusing text
-        clean_text = re.sub(r'09\d{8}', '', text) # Remove phone numbers
+        # FIX: Strip phone numbers BEFORE any pattern runs, so 09XXXXXXXX
+        # and +251XXXXXXXXX are never matched by the 7-digit fallback.
+        clean_text = re.sub(r'\b09\d{8}\b', '', text)
+        clean_text = re.sub(r'\+251\d{9}', '', clean_text)
+        clean_text = re.sub(r'\b251\d{9}\b', '', clean_text)
         
         patterns = [
             self._pattern_anchored,
@@ -61,7 +64,8 @@ class PriceExtractor:
         anchors = ["price", "value", "ዋጋ", "ብር", "መነሻ ዋጋ", "total price", "ያለበት እዳ"]
         pattern = r"([\d,]+(?:\.\d+)?)"
         for anchor in anchors:
-            match = re.search(rf"{anchor}[:\s\-\=\x16\x17\x18]*{pattern}", text, re.I)
+            # FIX: added = to separators — same fix as semantic_engine.py
+            match = re.search(rf"{anchor}[:\s\-=\x16\x17\x18]*{pattern}", text, re.I)
             if match:
                 try:
                     val = float(match.group(1).replace(',', ''))

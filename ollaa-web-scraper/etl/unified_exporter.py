@@ -155,6 +155,17 @@ async def run_exporter_async():
     if len(all_normalized_listings) > fetch_limit:
         all_normalized_listings = all_normalized_listings[:fetch_limit]
 
+    # FIX: Deduplicate by content_hash before writing
+    seen_hashes = set()
+    deduped_listings = []
+    for listing in all_normalized_listings:
+        # Check dictionary safely
+        h = listing.get('content_hash')
+        if h not in seen_hashes:
+            seen_hashes.add(h)
+            deduped_listings.append(listing)
+    all_normalized_listings = deduped_listings
+
     # Deduplication
     logger.info(f"Performing deduplication on {len(all_normalized_listings)} listings")
     unique_listings, duplicate_count = deduplicator.deduplicate(all_normalized_listings)

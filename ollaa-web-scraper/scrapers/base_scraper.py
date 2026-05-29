@@ -204,7 +204,22 @@ class BaseScraper(ABC):
             ScrapedListing or None if parsing failed
         """
         try:
+            # FIX: Guard against navigation/filter pages being parsed as
+            # listings. These have very short titles and descriptions that
+            # are just comma-separated neighbourhood lists.
+            card_full_text = card_element.get_text(' ', strip=True)
             title_elem = card_element.select_one(selectors.get("title", ""))
+            _title_check = title_elem.get_text(strip=True) if title_elem else ''
+            _is_nav_page = (
+                len(_title_check) < 15 and
+                re.search(
+                    r'\b(Ayat|Bole|CMC|Megenagna|Summit)\s+(Bole|CMC|Summit|Ayat|Kality)',
+                    card_full_text
+                )
+            )
+            if _is_nav_page:
+                return None
+
             price_elem = card_element.select_one(selectors.get("price", ""))
             location_elem = card_element.select_one(selectors.get("location", ""))
             desc_elem = card_element.select_one(selectors.get("description", ""))
