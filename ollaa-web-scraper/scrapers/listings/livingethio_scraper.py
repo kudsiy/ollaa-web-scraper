@@ -1,46 +1,35 @@
 """
-Living Ethio real estate listing scraper.
+Living Ethio scraper.
+FIXED: Was inheriting EngochaScraper selectors. Now uses WordPressPropertyScraper.
 """
 import logging
-from typing import Optional, List
-from scrapers.listings.engocha_scraper import EngochaScraper
+import re
+from typing import List, Optional
+from scrapers.listings.wordpress_property_scraper import WordPressPropertyScraper
 from scrapers.base_scraper import ScrapedListing
 
 logger = logging.getLogger(__name__)
 
-class LivingEthioScraper(EngochaScraper):
-    """
-    Scraper for Living Ethio real estate listings.
-    """
-    
+
+class LivingEthioScraper(WordPressPropertyScraper):
+
     base_url = "https://livingethio.com"
     source_name = "Living Ethio"
-    
+
     async def _find_listing_pages(self) -> List[str]:
-        """Find listing pages for Living Ethio."""
         return [
-            f"{self.base_url}/properties-2/",
+            f"{self.base_url}/properties/",
+            f"{self.base_url}/properties/?status=for-sale",
+            f"{self.base_url}/properties/?status=for-rent",
             f"{self.base_url}/property-type/apartment/",
             f"{self.base_url}/property-type/house/",
-            f"{self.base_url}/property-status/for-sale/",
-            f"{self.base_url}/property-status/for-rent/",
         ]
-    
+
     def _parse_listing_card(self, card) -> Optional[ScrapedListing]:
-        """
-        Custom parsing for Living Ethio.
-        """
         listing = super()._parse_listing_card(card)
         if listing:
-            # Clean up title
-            listing.title = listing.title.replace("Addis Ababa Ethiopia", "").replace("Addis Ababa", "").strip()
-            
-            # Detect location if not found
-            if not listing.location:
-                # Often location is in the title after "in"
-                import re
-                match = re.search(r'in\s+([^,]+)', listing.title)
-                if match:
-                    listing.location = match.group(1).strip()
-        
+            listing.title = re.sub(
+                r'\s*[-|]\s*(?:Addis Ababa(?:\s+Ethiopia)?|Ethiopia)\s*$',
+                '', listing.title, flags=re.IGNORECASE
+            ).strip()
         return listing

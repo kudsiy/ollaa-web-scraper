@@ -515,27 +515,38 @@ class SemanticProcessingEngine:
         if re.search(r'\$|USD|ዶላር', text, re.I):
             results["currency"] = "USD"
 
-        # 1. Anchored price extraction — handles "ዋጋ = 17 ሚሊዮን", "price: 5,000,000"
+        # 1. Anchored price extraction — handles "ዋጋ = 17 ሚሊዮን", "price: 5,000,000", "Price: 10M"
         price_anchors = ["price", "value", "ዋጋ", "ብር", "መነሻ ዋጋ", "total price"]
-        price_pattern = r"[\d,]+(?:\.\d+)?"
+        # Extended pattern to capture number + optional M/K suffix together
+        price_pattern = r"[\d,]+(?:\.\d+)?(?:\s*(?:M|K|million|ሚሊዮን|ሺህ|thousand))?"
         anchored_price = self._anchored_extract(text, price_anchors, price_pattern)
 
         if anchored_price:
             try:
-                val = anchored_price.replace(',', '')
-                results["price"] = float(val)
-
-                # Look up to 30 chars after the matched number for million/ሚሊዮን
-                anchor_pos = text.find(anchored_price)
-                nearby = text[max(0, anchor_pos - 5): anchor_pos + 30].lower()
-
-                if any(w in nearby for w in ['ሚሊዮን', 'ሚሊየን', 'million']):
-                    results["price"] *= 1_000_000
-                elif any(k in nearby for k in ['ሺህ', 'thousand']):
-                    results["price"] *= 1_000
+                raw = anchored_price.strip()
+                # Check for inline M/K suffix
+                m_suffix = re.search(r'^([\d,]+(?:\.\d+)?)\s*(M|K|million|ሚሊዮን|ሺህ|thousand)$', raw, re.I)
+                if m_suffix:
+                    num_val = float(m_suffix.group(1).replace(',', ''))
+                    suffix = m_suffix.group(2).upper()
+                    if suffix in ('M', 'MILLION', 'ሚሊዮን'):
+                        results["price"] = num_val * 1_000_000
+                    elif suffix in ('K', 'THOUSAND', 'ሺህ'):
+                        results["price"] = num_val * 1_000
+                    else:
+                        results["price"] = num_val
+                else:
+                    results["price"] = float(raw.replace(',', ''))
+                    # Look up to 30 chars after the matched number for million/ሚሊዮን
+                    anchor_pos = text.find(anchored_price)
+                    nearby = text[max(0, anchor_pos - 5): anchor_pos + 30].lower()
+                    if any(w in nearby for w in ['ሚሊዮን', 'ሚሊየን', 'million']):
+                        results["price"] *= 1_000_000
+                    elif any(k in nearby for k in ['ሺህ', 'thousand']):
+                        results["price"] *= 1_000
 
                 # Reject junk values (bedroom counts, floor numbers etc.)
-                if results["price"] < 100_000:
+                if results["price"] is not None and results["price"] < 100_000:
                     results["price"] = None
 
             except Exception:

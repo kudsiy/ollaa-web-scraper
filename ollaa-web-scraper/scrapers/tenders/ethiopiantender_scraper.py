@@ -2,8 +2,9 @@
 Ethiopian Tender scraper.
 """
 import logging
+import asyncio
 from typing import Optional
-from scrapers.base_scraper import ScrapedListing
+from scrapers.base_scraper import ScrapedListing, ScrapeResult
 from scrapers.tenders.base_tender_scraper import BaseTenderScraper
 
 logger = logging.getLogger(__name__)
@@ -13,10 +14,13 @@ class EthiopianTenderScraper(BaseTenderScraper):
     """
     Scraper for Ethiopian Tender notices.
     """
+    item_selector = "div.tender-table-wrapper, .tender-item, article"
+
+    def scrape(self) -> ScrapeResult:
+        return asyncio.run(self.scrape_async())
     
     base_url = "https://www.ethiopiantender.com"
     source_name = "Ethiopian Tender"
-    item_selector = "div.tender-table-wrapper"
 
     def _parse_tender_item(self, item) -> Optional[ScrapedListing]:
         """Custom parsing for Ethiopian Tender."""

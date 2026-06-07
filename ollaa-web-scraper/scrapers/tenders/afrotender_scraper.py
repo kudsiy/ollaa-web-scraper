@@ -2,8 +2,9 @@
 AfroTender scraper.
 """
 import logging
+import asyncio
 from typing import Optional
-from scrapers.base_scraper import ScrapedListing
+from scrapers.base_scraper import ScrapedListing, ScrapeResult
 from scrapers.tenders.base_tender_scraper import BaseTenderScraper
 
 logger = logging.getLogger(__name__)
@@ -13,10 +14,13 @@ class AfroTenderScraper(BaseTenderScraper):
     """
     Scraper for AfroTender notices.
     """
+    item_selector = ".col-lg-6.mb-4, .tender-card, article.tender"
+
+    def scrape(self) -> ScrapeResult:
+        return asyncio.run(self.scrape_async())
     
     base_url = "https://afrotender.com/publictenders"
     source_name = "AfroTender"
-    item_selector = ".col-lg-6.mb-4"
 
     def _parse_tender_item(self, item) -> Optional[ScrapedListing]:
         """Custom parsing for AfroTender."""

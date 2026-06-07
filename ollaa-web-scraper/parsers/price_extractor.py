@@ -1,15 +1,6 @@
 """
 Price extractor for parsing ETB amounts from text.
 Enhanced with patterns from Ethiopian real estate listing analysis.
-
-FIXES APPLIED:
-  1. Added = to separator in _pattern_anchored — was missing, broke "ዋጋ = 17 ሚሊዮን"
-  2. Added _pattern_anchored_equals for explicit "ዋጋ = X ሚሊዮን ብር" format
-  3. Added _pattern_large_birr — catches "6,930,000 ብር" formatted amounts
-  4. Added _pattern_seven_digits — catches plain 7-9 digit birr amounts
-  5. Added _pattern_parenthesis_million — catches "(38 million)" format
-  6. Replaced overly broad numeric fallback with MIN_PRICE guard (100,000 ETB)
-  7. Stripped phone numbers before extraction so 09XXXXXXXX never matches as price
 """
 import logging
 import re
@@ -19,8 +10,8 @@ from config import get_config
 
 logger = logging.getLogger(__name__)
 
-# Sanity bounds — below 100k or above 500M is almost certainly not a valid price
-MIN_PRICE = 100_000
+# Sanity bounds — below 1k or above 500M is almost certainly not a valid price
+MIN_PRICE = 1000
 MAX_PRICE = 500_000_000
 
 
@@ -39,6 +30,7 @@ class PriceExtractor:
       7. _pattern_br               — "Birr 500,000"
       8. _pattern_seven_digits     — plain 7–9 digit number
       9. _pattern_thousand         — "500 thousand / ሺህ"
+     10. _pattern_numeric          — plain numeric fallback
     """
 
     def __init__(self):
@@ -53,7 +45,7 @@ class PriceExtractor:
 
         text = text.strip()
         # FIX: Strip phone numbers BEFORE any pattern runs, so 09XXXXXXXX
-        # and +251XXXXXXXXX are never matched by the 7-digit fallback.
+        # and +251XXXXXXXXX are never matched by the fallback.
         clean = re.sub(r'\b09\d{8}\b', '', text)
         clean = re.sub(r'\+251\d{9}', '', clean)
         clean = re.sub(r'\b251\d{9}\b', '', clean)
@@ -68,6 +60,7 @@ class PriceExtractor:
             self._pattern_br,
             self._pattern_seven_digits,
             self._pattern_thousand,
+            self._pattern_numeric,
         ]:
             price = method(clean)
             if price is not None and MIN_PRICE <= price <= MAX_PRICE:
@@ -170,13 +163,13 @@ class PriceExtractor:
 
     def _pattern_million(self, text: str) -> Optional[float]:
         """
-        Match "X million" or "X ሚሊዮን [ብር]"
-        Handles decimal millions: "2.5 million", "17 ሚሊዮን"
+        Match "X million" or "X ሚሊዮን [ብር]" or "X M"
+        Handles decimal millions: "2.5 million", "17 ሚሊዮን", "2.5M"
         """
         patterns = [
-            r'(\d+(?:[.,]\d+)?)\s*(?:million|mio)\s*(?:ETB|Birr|ብር)?',
-            r'(?:ETB|Birr|ብር)\s*(\d+(?:[.,]\d+)?)\s*(?:million|mio)',
-            r'(\d+(?:[.,]\d+)?)\s*(?:ሚሊዮን|ሚሊየን)',
+            r'(\d+(?:[.,]\d+)?)\s*(?:million|mio|m|M)\s*(?:ETB|Birr|ብር)?',
+            r'(?:ETB|Birr|ብር)\s*(\d+(?:[.,]\d+)?)\s*(?:million|mio|m|M)',
+            r'(\d+(?:[.,]\d+)?)\s*(?:ሚሊዮን|ሚሊየን|ሚ)',
         ]
         for pat in patterns:
             m = re.search(pat, text, re.IGNORECASE)
@@ -265,8 +258,7 @@ class PriceExtractor:
     def _pattern_thousand(self, text: str) -> Optional[float]:
         """Match "500 thousand", "500K", "500 ሺህ"."""
         patterns = [
-            r'(\d+(?:[.,]\d+)?)\s*(?:thousand)\s*(?:ETB|Birr|ብር)?',
-            r'(\d+(?:[.,]\d+)?)\s*K\s*(?:ETB|Birr|ብር)',
+            r'(\d+(?:[.,]\d+)?)\s*(?:thousand|k|K)\s*(?:ETB|Birr|ብር)?',
             r'(\d+(?:[.,]\d+)?)\s*(?:ሺ|ሺህ)',
         ]
         for pat in patterns:
@@ -276,4 +268,22 @@ class PriceExtractor:
                     return float(m.group(1).replace(',', '')) * 1_000
                 except Exception:
                     continue
+        return None
+
+    def _pattern_numeric(self, text: str) -> Optional[float]:
+        """
+        Match plain numeric values (fallback pattern).
+        Only matches if the number is reasonably large for a property price.
+        """
+        pattern = r'([\d,]+(?:\.\d+)?)(?!\d)'
+        m = re.search(pattern, text)
+        if m:
+            try:
+                val_str = m.group(1).replace(',', '')
+                if val_str.startswith('09') or val_str.startswith('251'):
+                    return None
+                val = float(val_str)
+                return val
+            except ValueError:
+                pass
         return None

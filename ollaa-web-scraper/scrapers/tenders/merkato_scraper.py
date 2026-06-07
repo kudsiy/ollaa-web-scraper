@@ -2,8 +2,9 @@
 2Merkato Tenders scraper.
 """
 import logging
+import asyncio
 from typing import Optional
-from scrapers.base_scraper import ScrapedListing
+from scrapers.base_scraper import ScrapedListing, ScrapeResult
 from scrapers.tenders.base_tender_scraper import BaseTenderScraper
 
 logger = logging.getLogger(__name__)
@@ -14,10 +15,13 @@ class MerkatoScraper(BaseTenderScraper):
     Scraper for 2Merkato Tender notices.
     Specifically targets Land Lease and Real Estate.
     """
+    item_selector = "[class*='rounded-lg'][class*='bg-white'], .tender-card, article"
+
+    def scrape(self) -> ScrapeResult:
+        return asyncio.run(self.scrape_async())
     
     base_url = "https://tender.2merkato.com/tenders"
     source_name = "2Merkato"
-    item_selector = "div.bg-white.rounded-lg.p-4"
 
     def _parse_tender_item(self, item) -> Optional[ScrapedListing]:
         """Custom parsing for 2Merkato."""

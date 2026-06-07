@@ -6,6 +6,7 @@ import unittest
 from unittest.mock import MagicMock, patch, call
 import os
 import sys
+import gspread
 
 # Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))

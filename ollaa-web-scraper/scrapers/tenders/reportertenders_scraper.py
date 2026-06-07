@@ -2,8 +2,9 @@
 Reporter Tenders scraper.
 """
 import logging
+import asyncio
 from typing import Optional
-from scrapers.base_scraper import ScrapedListing
+from scrapers.base_scraper import ScrapedListing, ScrapeResult
 from scrapers.tenders.base_tender_scraper import BaseTenderScraper
 
 logger = logging.getLogger(__name__)
@@ -13,10 +14,13 @@ class ReporterTendersScraper(BaseTenderScraper):
     """
     Scraper for Reporter Tenders notices.
     """
+    item_selector = ".rtcl-listing-item, .listing-item, article"
+
+    def scrape(self) -> ScrapeResult:
+        return asyncio.run(self.scrape_async())
     
     base_url = "https://reportertenders.com/all-tenders/"
     source_name = "Reporter Tenders"
-    item_selector = ".rtcl-listing-item"
 
     def _parse_tender_item(self, item) -> Optional[ScrapedListing]:
         """Custom parsing for Reporter Tenders."""
