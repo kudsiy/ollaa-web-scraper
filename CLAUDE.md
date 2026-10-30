@@ -75,8 +75,14 @@ Ollaa-Telegram scraper depends on it. Protecting it comes before everything else
   `.venv/`, `property_data*.json` / `*.csv`, `exports/`, logs, or any scraped data (it holds
   other people's phone numbers).
 - Never force-push, rewrite history or delete branches on GitHub without the owner's
-  approval. If history is ever rewritten (task W5), every copy cloned before that must be
-  deleted and cloned again.
+  approval. If history is ever rewritten, every copy cloned before that must be deleted and
+  cloned again.
+- Since W11, `main` is the only branch. After a task branch is merged into `main`, ask the
+  owner before deleting it.
+- `backups/` (ignored by git) holds `branches_before_W11_2026-10-30.bundle`, a copy of
+  every branch deleted in W11. Restore one with
+  `git fetch backups/branches_before_W11_2026-10-30.bundle refs/remotes/origin/<name>:refs/heads/<name>`.
+  Its history includes the old password: never upload it or put it on GitHub.
 
 ## Secrets and settings
 
@@ -92,8 +98,9 @@ Ollaa-Telegram scraper depends on it. Protecting it comes before everything else
   login `postgres` (task W3, checked by `tests/test_settings.py`). Never switch this project
   to `postgres`: it has no administrator tasks (the same rule as Ollaa-Telegram task S9).
 - Never write a password into a script or a `.bat` file. The old `START_OLLAA.bat` did, and
-  that old password is still readable in this repository's public history (W5). It has
-  been changed and must never be used again.
+  that old password is still readable in the saved copies of old pull requests #1–#9 on
+  GitHub (W5; no branch has it since W11). It has been changed and must never be used
+  again.
 
 ## Database safety
 

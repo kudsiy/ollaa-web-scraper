@@ -69,7 +69,7 @@ ignored):
 
 | Copy | Date | Same as GitHub? | Work not on GitHub |
 |---|---|---|---|
-| `C:\Projects\ollaa-web` (git) | 7 Jun | yes, `main` exactly | none (its local branch `master`, "initial local state", only holds versions that are on GitHub) |
+| `C:\Projects\ollaa-web` (git) | 7 Jun | yes, `main` exactly | none (its local branch `master`, "initial local state", only holds versions that are on GitHub; deleted in W11) |
 | `Downloads\ollaa-web-scraper-main\` and `Downloads\ollaa-web-scraper-main.zip` | downloaded 30 Oct | yes, `main` exactly | none |
 | `C:\Projects\ollaa-web-scraper-main (3).zip` | 25 May | yes, commit `46935da` | none |
 | `Downloads\Sorted Files\Archives\ollaa-web-scraper-main (1).zip`, `(2).zip`, `(3).zip` | 17, 27, 30 May | yes, commits `db7f56f`, `20390bb`, `1935c80` | none |
@@ -183,13 +183,13 @@ from Ollaa-Telegram's audit), and the Google Sheet (needs the owner's Google log
    `web_scraped_listings` row older than 90 days, once a day, with no backup. The Google
    Sheet upload also shrank any sheet with more than 57 columns back to 57, deleting
    whatever was in the extra columns. Both are gone; nothing deletes data automatically.
-5. **Old password on GitHub.** `START_OLLAA.bat` (in GitHub's history from 9 to 13 May)
-   contains the old database password. It was deleted from `main` on 13 May but is still
-   readable in 4 old branches (`cto/end-to-end-validation-ollaa-scrapers`,
-   `cto/test-scrapers-e2e-build`, `cto/update-valuation-worthy-sources-registry`,
-   `cto/validate-ollaa-scrapers-end-to-end`) and pull requests #1–#4. The password has been
-   changed (it does not match the current one), so the risk is low unless it was reused
-   somewhere else.
+5. **Old password on GitHub.** `START_OLLAA.bat` (in GitHub's early history, 9 to 13 May)
+   contains the old database password. Corrected in W11: it was never in `main`'s history
+   (`main` starts on 16 May), but it was in the history of 9 old branches, not 4 (the audit
+   only looked at each branch's latest files). W11 deleted those branches, so now it is
+   readable only in the saved copies of old pull requests #1–#9, which only GitHub Support
+   can remove. The password has been changed (it does not match the current one), so the
+   risk is low unless it was reused somewhere else.
 6. **Sources listed as working that have no scraper**: `etrealtor`, `ethiopianproperties`,
    `zegebeya`, `afrobet` (each run logs "No scraper implementation found"). `jiji` runs in
    the exporter but not in `scheduler.py`. Eight files are never used: the `abay`, `dbe`,
@@ -205,9 +205,9 @@ from Ollaa-Telegram's audit), and the Google Sheet (needs the owner's Google log
    on Windows they are one-line text files, so `pip install -r requirements.txt` from the
    top folder fails. Package versions are not pinned (`>=`), unlike Ollaa-Telegram.
 9. **Housekeeping.** No README or how-to-run guide (the old README was removed; a new one
-   was added by W10). 27 old
-   `cto/*` branches on GitHub. The folder's git identity is "Antigravity"; 13 old commits
-   show the owner's personal e-mail address publicly.
+   was added by W10). 27 old `cto/*` branches on GitHub (deleted in W11). The folder's git
+   identity is "Antigravity"; 13 old commits show the owner's personal e-mail address
+   publicly.
 
 ## What is missing
 
@@ -222,12 +222,12 @@ from Ollaa-Telegram's audit), and the Google Sheet (needs the owner's Google log
 | W2 | Make `pytest` offline-only. Moved the two live diagnostics to `tools/live_diagnostic.py` and `tools/live_quick_diagnostic.py` (names no tool collects; they refuse to start without `--live`; removed the hidden pytest hook), added `ollaa-web-scraper/pytest.ini` (tests in `tests/` only), and `tests/conftest.py`, which blocks the internet, the database and the browser for every test, checked by `tests/test_offline_guard.py` | stops accidental scraping | done 30 Oct 2026 (29 offline tests pass) |
 | W3 | Settings: `config.py` reads `.env` from the top folder (`python-dotenv`, added to `requirements.txt`), the same `DB_*` names as Ollaa-Telegram, login `ollaa_user`, no default password; `etl/db_writer.py` refuses to connect without `DB_PASSWORD` or as `postgres`; removed an unused line that wrote the password into a database address; added `.env.example`, `tests/test_settings.py`, and this laptop's `.env` (everyday login copied from Ollaa-Telegram's `.env`, values not shown) | safe database login | done 30 Oct 2026 (36 offline tests pass) |
 | W4 | Remove the daily 90-day delete. Removed the scheduler's daily clean-up job and `DBWriter.delete_old_listings` (old listings are price history; deleting is a manual step for the owner, after a backup). Also in the Google Sheet upload: the sheet still grows to 57 columns but is never shrunk, and only the first 57 header cells are checked, so extra columns are kept. Added `tests/test_no_deletion.py` | no silent data loss | done 30 Oct 2026 (41 offline tests pass) |
-| W5 | Old password on GitHub: owner confirms it is not used anywhere else; then either accept it (it is retired) or delete the 4 old branches and ask GitHub Support to remove the 4 pull-request copies | public history | to do (owner decision) |
+| W5 | Old password on GitHub: owner confirms it is not used anywhere else; then either accept it (it is retired) or ask GitHub Support to remove the saved copies of pull requests #1–#9 (the branches that held it were deleted in W11; `main` never had it) | public history | to do (owner decision) |
 | W6 | Set up a project `venv`, pin package versions in `requirements.txt`, document `pip install -r ollaa-web-scraper\requirements.txt` | reproducible set-up on Windows, independent of the owner's own package folder | to do |
 | W7 | Offline tests for the scrapers: save one page per source and test each scraper on the saved page (no internet) | today's tests check only the parsers, the Sheet upload, the Telegram ban and the offline guard, not a single scraper | to do |
 | W8 | Owner opens the Google Sheet (ID in `.github/workflows/sync_to_sheets.yml`) and the 76 database rows, and decides: use this project again, or keep it parked. Also decide whether to delete the old Telegram adverts there (source names "Ethio Real Estate Telegram", "Betoch Telegram"; backup first) | is the data useful? | to do (owner) |
 | W9 | Source registry clean-up: honest status per source, remove or implement the 4 sources without a scraper, add `jiji` to the scheduler, remove unused scraper files (with owner approval) | runs only what works | to do |
 | W10 | Write a short README (what, how to run, how not to run). Added `README.md` (top folder): what the project does, its status, outputs, folders, set-up, the offline test command, the live commands (only with approval; the exporter starts as `python -m etl.unified_exporter`, because `python etl/unified_exporter.py` cannot find its modules on Windows) and a "never" list. Also added `exports/` and `results.txt` to `.gitignore`: the scheduler's daily CSV and its fallback results file hold scraped adverts and were not ignored | for the owner and future sessions | done 30 Oct 2026 |
-| W11 | GitHub clean-up: delete old merged `cto/*` branches and the local `master` branch (owner approval) | tidy, fewer copies of history | to do |
+| W11 | GitHub clean-up, with the owner's approval of the exact list. Every branch was first copied to `backups/branches_before_W11_2026-10-30.bundle` (ignored by git; checked complete) and checked: 24 were inside `main`'s history, and 8 early ones (11–15 May) were carried into `main` (each is part of the 15 May branch, whose latest files are all in `main`). The one with work that never reached `main`, `cto/validate-ollaa-scrapers-end-to-end` (a closed "WIP" attempt of 11 May, pull request #2), was also deleted, on the owner's decision. Deleted 33 branches on GitHub (6 finished task branches, 27 old `cto/*`) and 7 on this laptop (including `master`); `main` is now the only branch. Restore one with `git fetch backups/branches_before_W11_2026-10-30.bundle refs/remotes/origin/<name>:refs/heads/<name>` | tidy, removes the old password from every branch | done 30 Oct 2026 |
 | W12 | Old copies: owner deletes the copies listed above (keep the 5 May zip only if the PPAA scraper is wanted) | removes the old password from the laptop | to do (owner) |
 | W13 | Only if W8 says "use it": fix the Linux save path in the two `tools/live_*.py` scripts, then one supervised live test run of a single website source, then decide about re-enabling the GitHub automation | first real run after the fixes | to do |
