@@ -2,6 +2,11 @@
 """
 Ollaa Web Scraper - Quick Diagnostic Test
 Fast validation tests without network delays.
+
+LIVE: this visits the real bank, tender and property websites. Run it only with the
+owner's approval for that run. It is not a test and pytest never collects it.
+
+Usage: python tools/live_quick_diagnostic.py --live
 """
 
 import sys
@@ -218,4 +223,7 @@ def main():
         return 1
 
 if __name__ == "__main__":
+    if "--live" not in sys.argv:
+        sys.exit("This visits real websites. With the owner's approval, run: "
+                 "python tools/live_quick_diagnostic.py --live")
     sys.exit(main())

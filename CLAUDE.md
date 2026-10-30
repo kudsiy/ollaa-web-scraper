@@ -1,7 +1,8 @@
 # Rules for working on ollaa-web-scraper
 
 Read `STATUS.md` first: it has the audit findings (30 October 2026) and the numbered fix
-list (W1, W2, …). W1 is done; W2–W4 must be done before anything in this project is run.
+list (W1, W2, …). W1 and W2 are done; W3 and W4 must be done before anything in this
+project is run.
 
 ## Working with the owner
 
@@ -34,16 +35,20 @@ Ollaa-Telegram scraper depends on it. Protecting it comes before everything else
   `TG_API_ID` / `TG_API_HASH` / phone number, no `.session` files. Never copy
   Ollaa-Telegram's `.env` Telegram values or login files into this project. If Telegram
   data is wanted, it comes from Ollaa-Telegram.
-- `tests/test_no_telegram.py` fails if a Telegram source or Telegram code comes back. Run
-  it after any change to the sources, scrapers or parsers, and never weaken it.
+- `tests/test_no_telegram.py` fails if a Telegram source or Telegram code comes back. It
+  runs with every `python -m pytest`; never weaken it.
 
 ## Websites and tests
 
-- Audits and tests never visit live websites. `tests/diagnostic_test.py` and
-  `tests/quick_diagnostic.py` visit real bank and tender sites: never run them. A bare
-  `pytest` also runs `diagnostic_test.py`, so until W2 is done run the offline tests by
-  name, from `ollaa-web-scraper\`:
-  `python -m pytest tests/test_amharic_parser.py tests/test_price_extractor.py tests/test_advanced_semantics.py tests/test_sheets_uploader.py tests/test_no_telegram.py -p no:cacheprovider`
+- Audits and tests never visit live websites. Run the tests with `python -m pytest` from
+  `ollaa-web-scraper\` (or `python -m pytest ollaa-web-scraper` from the top folder);
+  `ollaa-web-scraper\pytest.ini` limits them to `tests/`. Run them after every change.
+- `tests/conftest.py` blocks the internet, the database and the browser for every test
+  (task W2), and `tests/test_offline_guard.py` checks that the block works. Never weaken
+  them. Tests use saved pages and fakes, never a real website.
+- The live website checks are in `tools/` (`live_diagnostic.py`, `live_quick_diagnostic.py`).
+  They refuse to start without `--live`; run them only with the owner's approval for that
+  run. Never put a script that goes online in `tests/`, and never name one `test_*.py`.
 - A live scraping run needs the owner's approval for that run: no logins, no getting
   around blocks or CAPTCHAs, polite delays.
 
@@ -112,6 +117,8 @@ Ollaa-Telegram scraper depends on it. Protecting it comes before everything else
 - `etl/`: cleaning (`normalizer.py`), removing duplicates (`deduplicator.py`), writing to
   the database (`db_writer.py`), the 57-column CSV (`sheets_exporter.py`) and the Google
   Sheet upload (`sheets_uploader.py`).
+- `tests/`: offline tests only. `tools/`: live website checks (need `--live` and the
+  owner's approval).
 - Two ways to run everything: `scheduler.py` (runs forever on a timer, writes the
   database) and `etl/unified_exporter.py` (one pass, writes `property_data.json`,
   `property_data_unified.csv` and the Google Sheet; this is what the GitHub automation ran).

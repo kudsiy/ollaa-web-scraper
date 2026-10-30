@@ -3,7 +3,10 @@
 Ollaa Web Scraper Diagnostic Test Script
 Tests all scrapers in diagnostic mode without requiring database.
 
-Usage: python tests/diagnostic_test.py
+LIVE: this visits the real bank, tender and property websites. Run it only with the
+owner's approval for that run. It is not a test and pytest never collects it.
+
+Usage: python tools/live_diagnostic.py --live
 """
 
 import sys
@@ -348,12 +351,8 @@ def run_all_tests():
     return test_results
 
 if __name__ == "__main__":
+    if "--live" not in sys.argv:
+        sys.exit("This visits real websites. With the owner's approval, run: "
+                 "python tools/live_diagnostic.py --live")
     results = run_all_tests()
     sys.exit(0 if results["summary"]["failed"] == 0 else 1)
-
-
-# Pytest test functions
-def test_diagnostic_suite():
-    """Run the full diagnostic suite via pytest."""
-    results = run_all_tests()
-    assert results is not None
