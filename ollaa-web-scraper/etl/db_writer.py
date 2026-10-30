@@ -10,7 +10,7 @@ from contextlib import contextmanager
 import psycopg2
 from psycopg2.extras import execute_values
 
-from config import get_config
+from config import ENV_FILE, get_config
 
 
 logger = logging.getLogger(__name__)
@@ -28,14 +28,30 @@ class DBWriter:
         self._connection = None
         
     def _get_connection_params(self) -> Dict[str, Any]:
-        """Get database connection parameters."""
-        return {
+        """
+        Get database connection parameters.
+
+        Refuses (task W3) when there is no password from .env, or when the login is the
+        administrator postgres: this project uses the everyday login ollaa_user.
+        """
+        params = {
             "host": self.db_config.get("host", self.config.db.host),
             "port": self.db_config.get("port", self.config.db.port),
             "database": self.db_config.get("database", self.config.db.database),
             "user": self.db_config.get("user", self.config.db.user),
             "password": self.db_config.get("password", self.config.db.password),
         }
+        if not params["password"]:
+            raise RuntimeError(
+                f"DB_PASSWORD is missing. Add it to {ENV_FILE} "
+                f"(copy .env.example to .env if the file does not exist)."
+            )
+        if params["user"] == "postgres":
+            raise RuntimeError(
+                "DB_USER is postgres, the administrator login. "
+                "Use the everyday login ollaa_user in .env."
+            )
+        return params
     
     @contextmanager
     def get_connection(self):

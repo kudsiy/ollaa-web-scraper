@@ -1,8 +1,7 @@
 # Rules for working on ollaa-web-scraper
 
 Read `STATUS.md` first: it has the audit findings (30 October 2026) and the numbered fix
-list (W1, W2, …). W1 and W2 are done; W3 and W4 must be done before anything in this
-project is run.
+list (W1, W2, …). W1–W3 are done; W4 must be done before `scheduler.py` is run.
 
 ## Working with the owner
 
@@ -80,13 +79,17 @@ Ollaa-Telegram scraper depends on it. Protecting it comes before everything else
 
 ## Secrets and settings
 
-- Today `config.py` reads the database settings from environment variables
-  `OLLAADB_HOST`, `OLLAADB_PORT`, `OLLAADB_NAME`, `OLLAADB_USER`, `OLLAADB_PASSWORD`, with
-  unsafe defaults (user `postgres`, password `postgres`); no `.env` file is read. Until W3 is
-  done, do not run anything that connects to the database.
-- After W3: every password and connection detail lives in `.env` in the project folder
-  (never committed); `.env.example` lists the names with empty values. Scripts use the
-  everyday login `ollaa_user`, never `postgres` (the same rule as Ollaa-Telegram task S9).
+- Every password and connection detail lives in `.env` in the top project folder
+  (`C:\Projects\ollaa-web\.env`, never committed); `.env.example` lists the names.
+  `config.py` reads it (with `python-dotenv`); settings already in the environment, such as
+  the GitHub automation's, win.
+- The database settings have the same names and values as Ollaa-Telegram's everyday login:
+  `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` = `ollaa_user`, `DB_PASSWORD` (copied from
+  Ollaa-Telegram's `.env` on 30 October 2026). If that password changes there, change it
+  here too. Never copy the administrator login or any Telegram value.
+- `etl/db_writer.py` refuses to connect without `DB_PASSWORD`, or as the administrator
+  login `postgres` (task W3, checked by `tests/test_settings.py`). Never switch this project
+  to `postgres`: it has no administrator tasks (the same rule as Ollaa-Telegram task S9).
 - Never write a password into a script or a `.bat` file. The old `START_OLLAA.bat` did, and
   that old password is still readable in this repository's public history (W5). It has
   been changed and must never be used again.

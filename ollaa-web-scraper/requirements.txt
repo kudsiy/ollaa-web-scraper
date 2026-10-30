@@ -17,6 +17,9 @@ playwright>=1.40.0
 # Database
 psycopg2-binary>=2.9.9
 
+# Settings from .env
+python-dotenv>=1.0.0
+
 # Scheduling
 schedule>=1.2.0
 

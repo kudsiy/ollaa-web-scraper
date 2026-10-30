@@ -38,7 +38,7 @@ It is a **scraper only**: there is no website or app for visitors.
 | Reads | Telegram: the channels and groups in its `src/channels.py`, with the owner's Telegram login | websites only (no Telegram since W1) |
 | Database | `ollaa` on this laptop | the **same** `ollaa` database |
 | Tables | `telegram_listings`, `processed_listings`, `rental_listings`, … | only its own `web_scraped_listings` (76 rows at Ollaa-Telegram's audit) |
-| Database login | `ollaa_user` (everyday), `postgres` only for backups | `postgres` by default (unsafe, see W3) |
+| Database login | `ollaa_user` (everyday), `postgres` only for backups | `ollaa_user` from its own `.env` (since W3); `postgres` is refused |
 | Other output | thesis report (`DATA_QUALITY.md`) | a Google Sheet, updated daily until 7 October 2026 |
 
 - Same database, **different data**: nothing in Ollaa-Telegram reads `web_scraped_listings`,
@@ -55,7 +55,7 @@ Not for Ollaa-Telegram: nothing there depends on it, and Ollaa-Telegram works wi
 
 It is worth **keeping, parked**: it is the only source of bank-auction and website prices,
 which could support valuation work later, and keeping it on GitHub costs nothing. Do not run
-it until W3 and W4 are done. Whether to use it again is the owner's decision after looking at
+the scheduler until W4 is done. Whether to use it again is the owner's decision after looking at
 what it produced (task W8).
 
 ## Copies on this laptop
@@ -93,8 +93,9 @@ Ollaa-Telegram; decide about them in an Ollaa-Telegram session.
 
 ## How to run it
 
-**Not yet.** Until W3 and W4 are done, do not run `scheduler.py`, `etl/unified_exporter.py`
-or any scraper on this laptop (unsafe database login, automatic deletion).
+**Not yet.** Until W4 is done, do not run `scheduler.py` (it deletes old rows every day).
+Every run of `scheduler.py`, `etl/unified_exporter.py` or a scraper visits real websites
+and needs the owner's approval for that run (W8, W13).
 
 What is safe now: the offline tests, from `C:\Projects\ollaa-web\ollaa-web-scraper` (the
 laptop's normal Python already has the packages):
@@ -140,6 +141,16 @@ After W2 (tests offline only): a plain `python -m pytest` collects only `tests/`
 `ollaa-web-scraper\` or from the top folder (`python -m pytest ollaa-web-scraper`). The two
 `tools/live_*.py` scripts stop with a message when started without `--live`.
 
+After W3 (safe database login): **36 tests pass** (the 29 above plus 7 in
+`tests/test_settings.py`). This laptop now has `C:\Projects\ollaa-web\.env`: the five
+everyday database settings were copied from Ollaa-Telegram's `.env` without being shown,
+and the program reads them (login `ollaa_user`, password present). In a copy without
+`.env`, as on GitHub's machines, every program still loads and `scheduler.py --init-db`
+stops with "DB_PASSWORD is missing. Add it to …\.env" before any database connection. Not
+checked: an actual login to the database (that needs a connection; the first approved run
+will show it). `ollaa_user` already owns `web_scraped_listings`: Ollaa-Telegram's task S9
+gave it every table in the database.
+
 Not checked, on purpose: any scraper against a real website, the Telegram reader (now
 removed), the database (a read-only count was blocked by the session's safety settings; the 76 rows come
 from Ollaa-Telegram's audit), and the Google Sheet (needs the owner's Google login).
@@ -157,11 +168,11 @@ from Ollaa-Telegram's audit), and the Google Sheet (needs the owner's Google log
    never collected. Both still save their results to a Linux path
    (`/home/engine/project/diagnostic_results.json`), so on Windows they would fail at the
    very end (see W13).
-3. **Database login.** `config.py` connects as `postgres` (the administrator) with the
-   default password `postgres` unless environment variables are set; it does not read a
-   `.env` file, and its setting names (`OLLAADB_*`) differ from Ollaa-Telegram's (`DB_*`).
-   Run on this laptop today, it would most likely fail to log in (the password was
-   changed), or, started from an old `.bat` file, try the retired password.
+3. **Database login (fixed by W3).** `config.py` connected as `postgres` (the
+   administrator) with the default password `postgres` unless environment variables were
+   set; it did not read a `.env` file, and its setting names (`OLLAADB_*`) differed from
+   Ollaa-Telegram's (`DB_*`). Now it reads `.env`, uses `DB_*` and `ollaa_user`, has no
+   default password, and refuses `postgres`.
 4. **Automatic deletion.** `scheduler.py` deletes every `web_scraped_listings` row older
    than 90 days, once a day, with no backup.
 5. **Old password on GitHub.** `START_OLLAA.bat` (in GitHub's history from 9 to 13 May)
@@ -191,7 +202,6 @@ from Ollaa-Telegram's audit), and the Google Sheet (needs the owner's Google log
 
 ## What is missing
 
-- A `.env` / `.env.example` and a settings module like Ollaa-Telegram's `src/settings.py`.
 - A record of when each source was last checked, and an honest status per source.
 - Pinned package versions and a project `venv`.
 - A README in simple words.
@@ -202,7 +212,7 @@ from Ollaa-Telegram's audit), and the Google Sheet (needs the owner's Google log
 |---|---|---|---|
 | W1 | Telegram: remove everything Telegram-related (owner's decision: Telegram is Ollaa-Telegram's job). Removed `scrapers/telegram_scraper.py`, the two channels in `source_registry.py`, their entries and the 30-minute Telegram timer in `scheduler.py` and `etl/unified_exporter.py`, the `t.me` check in `eligibility_checker.py`, the `@username` ("Telegram handle") reading in `parsers/semantic_engine.py` (phone numbers are still read), the Telegram `message_id` fallback in `etl/normalizer.py` and `etl/sheets_exporter.py` (web listings never had one, so their duplicate fingerprints do not change), and the Telegram comments in `requirements.txt`. Added `tests/test_no_telegram.py`, which fails if a Telegram source or Telegram code comes back. The 57 Sheet columns are unchanged | protects the Telegram account; one project per job | done 30 Oct 2026 (24 offline tests pass) |
 | W2 | Make `pytest` offline-only. Moved the two live diagnostics to `tools/live_diagnostic.py` and `tools/live_quick_diagnostic.py` (names no tool collects; they refuse to start without `--live`; removed the hidden pytest hook), added `ollaa-web-scraper/pytest.ini` (tests in `tests/` only), and `tests/conftest.py`, which blocks the internet, the database and the browser for every test, checked by `tests/test_offline_guard.py` | stops accidental scraping | done 30 Oct 2026 (29 offline tests pass) |
-| W3 | Settings: `.env` + `.env.example` + one settings module, `ollaa_user` instead of `postgres`, no default password, refuse to start without `.env` | safe database login | to do |
+| W3 | Settings: `config.py` reads `.env` from the top folder (`python-dotenv`, added to `requirements.txt`), the same `DB_*` names as Ollaa-Telegram, login `ollaa_user`, no default password; `etl/db_writer.py` refuses to connect without `DB_PASSWORD` or as `postgres`; removed an unused line that wrote the password into a database address; added `.env.example`, `tests/test_settings.py`, and this laptop's `.env` (everyday login copied from Ollaa-Telegram's `.env`, values not shown) | safe database login | done 30 Oct 2026 (36 offline tests pass) |
 | W4 | Remove the daily 90-day delete (or make it a report only) | no silent data loss | to do |
 | W5 | Old password on GitHub: owner confirms it is not used anywhere else; then either accept it (it is retired) or delete the 4 old branches and ask GitHub Support to remove the 4 pull-request copies | public history | to do (owner decision) |
 | W6 | Set up a project `venv`, pin package versions in `requirements.txt`, document `pip install -r ollaa-web-scraper\requirements.txt` | reproducible set-up on Windows, independent of the owner's own package folder | to do |

@@ -1,24 +1,38 @@
 """
 Configuration settings for Ollaa Web Scraper.
 Manages database connection, scraper delays, and global settings.
+
+Passwords and connection details come from the .env file in the top project folder
+(never committed; .env.example lists the names). Settings already in the environment,
+such as those of the GitHub automation, are kept.
 """
 import os
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Optional
+
+from dotenv import load_dotenv
+
+ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(ENV_FILE)
+
+
+def _env(name: str, default: str = ""):
+    """Read a setting when the config is created, so tests can change it."""
+    return field(default_factory=lambda: os.getenv(name, default))
 
 
 @dataclass
 class DatabaseConfig:
-    """PostgreSQL database configuration."""
-    host: str = os.getenv("OLLAADB_HOST", "localhost")
-    port: int = int(os.getenv("OLLAADB_PORT", "5432"))
-    database: str = os.getenv("OLLAADB_NAME", "ollaa")
-    user: str = os.getenv("OLLAADB_USER", "postgres")
-    password: str = os.getenv("OLLAADB_PASSWORD", "postgres")
-    
-    @property
-    def connection_string(self) -> str:
-        return f"postgresql://{self.user}:{self.password}@{self.host}:{self.port}/{self.database}"
+    """
+    PostgreSQL database configuration: the shared `ollaa` database on this laptop, with its
+    everyday login ollaa_user (task W3). There is no default password.
+    """
+    host: str = _env("DB_HOST", "localhost")
+    port: int = field(default_factory=lambda: int(os.getenv("DB_PORT", "5432")))
+    database: str = _env("DB_NAME", "ollaa")
+    user: str = _env("DB_USER", "ollaa_user")
+    password: str = _env("DB_PASSWORD")
 
 
 @dataclass
