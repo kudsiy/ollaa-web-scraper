@@ -8,6 +8,9 @@ in STATUS.md): do not run the scrapers, do not revive them, and do not switch th
 automation back on unless the owner asks for it in a new decision. Maintenance and offline
 work are fine; every run that visits websites needs the owner's approval for that run.
 Before any change to the scrapers, read `SCRAPING_REVIEW.md` (why they delivered so little).
+Ethiopia Property Centre blocks automated readers with a Cloudflare bot check (pilot W15,
+31 October 2026). Never get around such a check on any site: no headless browser that
+passes it, no pretending to be a normal browser, no CAPTCHA solving.
 
 ## Working with the owner
 

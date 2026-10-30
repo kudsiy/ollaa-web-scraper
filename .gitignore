@@ -14,3 +14,5 @@ ollaa-web-scraper/exports/
 ollaa-web-scraper/results.txt
 # Local backups (task W11): the branch backup also holds the old password in its history
 backups/
+# Pages saved from websites for the W15 pilot: they hold agents' phone numbers, never commit
+ollaa-web-scraper/saved_pages/

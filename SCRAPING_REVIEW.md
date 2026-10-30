@@ -82,6 +82,22 @@ the better route. Jiji and Qefira could follow only if the pilot works.
 Staying parked is also reasonable: Ollaa-Telegram already has 394 sale listings ready for
 the hedonic model, and reading its 2,860 photo-only posts is a larger gain.
 
+## 4. Pilot result (31 October 2026): the site blocks automated readers
+
+The owner started the pilot and approved 4 read-only requests (robots.txt, the terms page,
+one page of sale adverts, one advert), at least 10 seconds apart, with an honest research
+user agent. The **first request, for `robots.txt`, was refused with HTTP 403 and a
+Cloudflare "Just a moment…" check page**: the site lets in only real browsers that pass a
+hidden test, and blocks automated readers. The pilot stopped there; the other 3 requests
+were not used. Getting around such a check (pretending to be a normal browser, or a
+headless browser that passes the test) is not done in this project: it is against the
+site's clear wish. When the protection was added is not known; it may have helped stop our
+old scraper.
+
+What remains possible for Ethiopia Property Centre: ask the site for an academic data
+extract (the owner sends the request), or cite its published average-price reports, read by
+a person in a normal browser.
+
 ## Sources
 
 - [Ethiopia Property Centre, market report Q3 2026](https://ethiopiapropertycentre.com/market-reports/q3-2026)
