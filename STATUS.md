@@ -43,9 +43,9 @@ It is a **scraper only**: there is no website or app for visitors.
 
 - Same database, **different data**: nothing in Ollaa-Telegram reads `web_scraped_listings`,
   and its thesis numbers do not use it. The two Telegram channels this project used to read
-  are not in Ollaa-Telegram's channel list; adverts from them collected before W1 may still
-  be in the Google Sheet and in `web_scraped_listings` (source names "Ethio Real Estate
-  Telegram" and "Betoch Telegram"). Removing them is part of W8.
+  are not in Ollaa-Telegram's channel list. The Google Sheet holds none of their adverts
+  (checked 31 October); `web_scraped_listings` was not checked (source names "Ethio Real
+  Estate Telegram" and "Betoch Telegram").
 - Separate code: Ollaa-Telegram has its own parser (`run_pipeline.py`, `locations.py`); this
   project has another (`parsers/semantic_engine.py`). They do not share code.
 
@@ -53,10 +53,47 @@ It is a **scraper only**: there is no website or app for visitors.
 
 Not for Ollaa-Telegram: nothing there depends on it, and Ollaa-Telegram works without it.
 
-It is worth **keeping, parked**: it is the only source of bank-auction and website prices,
-which could support valuation work later, and keeping it on GitHub costs nothing. The safety
-fixes W1–W4 are done. Whether to use it again is the owner's decision after looking at what
-it produced (task W8).
+It is worth **keeping, parked**: keeping it on GitHub costs nothing and the safety fixes
+W1–W4 are done. What it produced so far is modest (see the next section): about 154 usable
+sale adverts, no bank-auction prices. Whether to use it again is the owner's decision
+(task W8).
+
+## What the Google Sheet holds (checked 31 October 2026)
+
+Read through the Google Sheets connection already set up in the Claude app (no new login).
+Only counts were analysed; the advert texts, which hold phone numbers, were not downloaded.
+
+- The spreadsheet "Ollaa-Web" has three tabs. **"new"** (4,409 rows) is the one the GitHub
+  automation filled. "Sheet1" (1,360 rows, 27–29 May) is an earlier upload; 1,240 of its
+  rows are also in "new". "Property Data" holds 2 junk rows from a first test on 16 May.
+- **Nothing new since 10 August 2026.** Rows were added from 29 May to 10 August; the daily
+  runs after that, until 7 October, added nothing although they all "succeeded". The main
+  listing site, Ethiopia Property Centre, last added rows on 7 June; BetDelala and most
+  tender sites on 10 August; the bank scrapers produced 6 rows in all (last on 8 June).
+- **A third of the rows are repeats**: 1,462 of the 4,409 rows repeat an advert link already
+  in the sheet (one advert appears 48 times); the duplicate check did not recognise them.
+- **Tender sites (2,548 rows) and bank/government auctions (54 rows: 48 from eGP, 6 from
+  banks) are not usable for valuation**: almost none has a price (0.4% and 2%) or a size,
+  and only about 1 in 5 tender titles is about property at all; most are purchases of goods
+  and services.
+- **Property listing sites (1,807 rows) are the useful part.** After removing repeats,
+  US-dollar prices and 75 "prices" that look like phone numbers (all on Ethiopia Property
+  Centre), **154 distinct sale adverts** have a price, a size and a place with a believable
+  price per m² (median about 151,000 ETB/m²; 10% below 25,000 and 10% above 297,000): 121
+  from Ethiopia Property Centre and 33 from BetDelala, 82 of them in Bole.
+- Missing for valuation: no advert has a posting date (only the day it was scraped), places
+  are only at sub-city level (Bole, Yeka, …), there are no coordinates, and bedrooms are
+  known for about 1 row in 5.
+- No adverts from the two removed Telegram channels are in the sheet.
+- For comparison, Ollaa-Telegram's thesis report (`DATA_QUALITY.md`) counts 394 sale
+  listings ready for a hedonic model. These 154 could add up to about 39% more, from other
+  sources, if they do not overlap (not checked). Its own biggest possible gain, reading its
+  2,860 photo-only posts, is much larger.
+
+**Recommendation:** keep the project parked and do not switch the GitHub automation back on
+as it is. If more sale prices are wanted for the thesis, the cheapest step is a one-off clean
+export of the 154 usable adverts (W14); reviving the scraping is only worth it for Ethiopia
+Property Centre and BetDelala, with the fixes in W14.
 
 ## Copies on this laptop
 
@@ -199,8 +236,8 @@ from Ollaa-Telegram's audit), and the Google Sheet (needs the owner's Google log
 7. **GitHub automation is off.** GitHub disabled the daily "Sync to Google Sheets" job for
    inactivity after its run on 7 October 2026. It ran 167 times; the last 100 runs
    (30 June to 7 October) all ended "success", about 15 minutes each. "Success" only means
-   it did not crash: the exporter hides scraper errors, so the Sheet's contents still need
-   checking (W8).
+   it did not crash: the exporter hides scraper errors. Indeed nothing new reached the Sheet
+   after 10 August (see "What the Google Sheet holds").
 8. **Windows set-up.** The top-level `requirements.txt` and `__init__.py` are Linux links;
    on Windows they are one-line text files, so `pip install -r requirements.txt` from the
    top folder fails. Package versions are not pinned (`>=`), unlike Ollaa-Telegram.
@@ -225,9 +262,10 @@ from Ollaa-Telegram's audit), and the Google Sheet (needs the owner's Google log
 | W5 | Old password on GitHub: owner confirms it is not used anywhere else; then either accept it (it is retired) or ask GitHub Support to remove the saved copies of pull requests #1–#9 (the branches that held it were deleted in W11; `main` never had it) | public history | to do (owner decision) |
 | W6 | Set up a project `venv`, pin package versions in `requirements.txt`, document `pip install -r ollaa-web-scraper\requirements.txt` | reproducible set-up on Windows, independent of the owner's own package folder | to do |
 | W7 | Offline tests for the scrapers: save one page per source and test each scraper on the saved page (no internet) | today's tests check only the parsers, the Sheet upload, the Telegram ban and the offline guard, not a single scraper | to do |
-| W8 | Owner opens the Google Sheet (ID in `.github/workflows/sync_to_sheets.yml`) and the 76 database rows, and decides: use this project again, or keep it parked. Also decide whether to delete the old Telegram adverts there (source names "Ethio Real Estate Telegram", "Betoch Telegram"; backup first) | is the data useful? | to do (owner) |
+| W8 | Check the Google Sheet and decide: use this project again, or keep it parked. Sheet checked on 31 Oct 2026 (see "What the Google Sheet holds"): 154 usable sale adverts, nothing new since 10 August, tenders and bank auctions not usable, no Telegram adverts. Recommendation: keep parked. Still open: the owner's decision, and the 76 database rows (not checked) | is the data useful? | checked; decision open (owner) |
 | W9 | Source registry clean-up: honest status per source, remove or implement the 4 sources without a scraper, add `jiji` to the scheduler, remove unused scraper files (with owner approval) | runs only what works | to do |
 | W10 | Write a short README (what, how to run, how not to run). Added `README.md` (top folder): what the project does, its status, outputs, folders, set-up, the offline test command, the live commands (only with approval; the exporter starts as `python -m etl.unified_exporter`, because `python etl/unified_exporter.py` cannot find its modules on Windows) and a "never" list. Also added `exports/` and `results.txt` to `.gitignore`: the scheduler's daily CSV and its fallback results file hold scraped adverts and were not ignored | for the owner and future sessions | done 30 Oct 2026 |
 | W11 | GitHub clean-up, with the owner's approval of the exact list. Every branch was first copied to `backups/branches_before_W11_2026-10-30.bundle` (ignored by git; checked complete) and checked: 24 were inside `main`'s history, and 8 early ones (11–15 May) were carried into `main` (each is part of the 15 May branch, whose latest files are all in `main`). The one with work that never reached `main`, `cto/validate-ollaa-scrapers-end-to-end` (a closed "WIP" attempt of 11 May, pull request #2), was also deleted, on the owner's decision. Deleted 33 branches on GitHub (6 finished task branches, 27 old `cto/*`) and 7 on this laptop (including `master`); `main` is now the only branch. Restore one with `git fetch backups/branches_before_W11_2026-10-30.bundle refs/remotes/origin/<name>:refs/heads/<name>` | tidy, removes the old password from every branch | done 30 Oct 2026 |
 | W12 | Old copies: owner deletes the copies listed above (keep the 5 May zip only if the PPAA scraper is wanted) | removes the old password from the laptop | to do (owner) |
 | W13 | Only if W8 says "use it": fix the Linux save path in the two `tools/live_*.py` scripts, then one supervised live test run of a single website source, then decide about re-enabling the GitHub automation | first real run after the fixes | to do |
+| W14 | Only if the owner wants web prices for the thesis: either export the 154 usable sale adverts once into a clean file (no phone numbers, never committed), or revive only Ethiopia Property Centre and BetDelala after fixing three things: phone numbers read as prices, the same advert added again and again, and missing posting dates | more sale prices for the hedonic model | to do (owner decision) |
