@@ -1,7 +1,7 @@
 # Rules for working on ollaa-web-scraper
 
 Read `STATUS.md` first: it has the audit findings (30 October 2026) and the numbered fix
-list (W1, W2, …). Tasks W1–W4 must be done before anything in this project is run.
+list (W1, W2, …). W1 is done; W2–W4 must be done before anything in this project is run.
 
 ## Working with the owner
 
@@ -22,26 +22,20 @@ list (W1, W2, …). Tasks W1–W4 must be done before anything in this project i
 - Sister project: `C:\Projects\Ollaa-Telegram`. Never change anything there from a session
   in this project. Its `CLAUDE.md` holds the Telegram account rules, which apply here too.
 
-## Telegram account safety (top priority)
+## No Telegram in this project (top priority)
 
 The owner's Telegram account has been revoked many times and banned once, and the
 Ollaa-Telegram scraper depends on it. Protecting it comes before everything else.
 
-- **This project never logs in to Telegram.** No Telethon or Pyrogram, no `TG_API_ID` /
-  `TG_API_HASH` / phone number, no `.session` files. Never copy Ollaa-Telegram's `.env`
-  Telegram values or login files into this project.
-- The only Telegram code here, `scrapers/telegram_scraper.py`, reads the public web
-  preview `https://t.me/s/<channel>` (no account), for two channels in
-  `source_registry.py`. As written it is far too fast: 2–5 seconds between pages, up to 50
-  pages per channel, every 30 minutes in `scheduler.py`. **Until task W1 is done, do not run
-  `scheduler.py`, `etl/unified_exporter.py` or `telegram_scraper.py` on this laptop**: they
-  share the internet connection that the owner's Telegram account uses.
-- After W1, web-preview reading follows the same limits as Ollaa-Telegram's
-  `src/media_web_fetch.py`: one request every 20–40 seconds (random), a hard cap per run,
-  stop at the first error or sign of blocking, never in a loop, and never at the same time
-  as Ollaa-Telegram's scraper, listener or photo fetcher.
-- Read only: never post, join, leave, react or contact anyone. Never add a Telegram channel
-  without the owner's approval.
+- **This is a website scraper only. Telegram is Ollaa-Telegram's job** (owner's decision,
+  30 October 2026). All Telegram code was removed in task W1.
+- Never add Telegram back in any form: no Telegram sources in `source_registry.py`, no
+  reading of `t.me` pages (not even the public web preview), no Telethon or Pyrogram, no
+  `TG_API_ID` / `TG_API_HASH` / phone number, no `.session` files. Never copy
+  Ollaa-Telegram's `.env` Telegram values or login files into this project. If Telegram
+  data is wanted, it comes from Ollaa-Telegram.
+- `tests/test_no_telegram.py` fails if a Telegram source or Telegram code comes back. Run
+  it after any change to the sources, scrapers or parsers, and never weaken it.
 
 ## Websites and tests
 
@@ -49,16 +43,16 @@ Ollaa-Telegram scraper depends on it. Protecting it comes before everything else
   `tests/quick_diagnostic.py` visit real bank and tender sites: never run them. A bare
   `pytest` also runs `diagnostic_test.py`, so until W2 is done run the offline tests by
   name, from `ollaa-web-scraper\`:
-  `python -m pytest tests/test_amharic_parser.py tests/test_price_extractor.py tests/test_advanced_semantics.py tests/test_sheets_uploader.py -p no:cacheprovider`
+  `python -m pytest tests/test_amharic_parser.py tests/test_price_extractor.py tests/test_advanced_semantics.py tests/test_sheets_uploader.py tests/test_no_telegram.py -p no:cacheprovider`
 - A live scraping run needs the owner's approval for that run: no logins, no getting
   around blocks or CAPTCHAs, polite delays.
 
 ## GitHub automation
 
 - `.github/workflows/sync_to_sheets.yml` ran every day on GitHub's computers (scraping all
-  sources, including the two Telegram channels, into a Google Sheet) until GitHub switched
-  it off for inactivity on 7 October 2026. Never re-enable or start it without the owner's
-  approval, and not before W1.
+  sources into a Google Sheet; until W1 that included two Telegram channels) until GitHub
+  switched it off for inactivity on 7 October 2026. Never re-enable or start it without
+  the owner's approval.
 - The Google key exists only as the GitHub secret `GOOGLE_CREDENTIALS`. `credentials.json`
   and any service-account file are never committed.
 
@@ -109,10 +103,10 @@ Ollaa-Telegram scraper depends on it. Protecting it comes before everything else
 
 ## How the project runs
 
-- `source_registry.py`: the list of sources (bank auctions, tender sites, property sites,
-  two Telegram channels) and their status.
-- `scrapers/`: one scraper per source (`banks/`, `tenders/`, `listings/`,
-  `telegram_scraper.py`), built on `scrapers/base_scraper.py`.
+- `source_registry.py`: the list of website sources (bank auctions, tender sites, property
+  sites) and their status.
+- `scrapers/`: one scraper per source (`banks/`, `tenders/`, `listings/`), built on
+  `scrapers/base_scraper.py`.
 - `parsers/`: reading prices, areas, places and Amharic text (`semantic_engine.py`,
   `price_extractor.py`, `amharic_parser.py`, PDF and OCR helpers).
 - `etl/`: cleaning (`normalizer.py`), removing duplicates (`deduplicator.py`), writing to

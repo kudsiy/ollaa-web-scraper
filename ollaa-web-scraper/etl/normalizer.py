@@ -76,7 +76,7 @@ class Normalizer:
             "source_name": normalized_source_name,
             "source_key": getattr(listing, 'source_key', None),
             "source_url": normalized_source_url,
-            "external_id": getattr(listing, 'external_id', None) or merged_raw_data.get("external_id") or merged_raw_data.get("id") or merged_raw_data.get("message_id"),
+            "external_id": getattr(listing, 'external_id', None) or merged_raw_data.get("external_id") or merged_raw_data.get("id"),
             "title": normalized_title,
             "description": normalized_description,
             "price": normalized_price,

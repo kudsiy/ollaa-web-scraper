@@ -38,7 +38,6 @@ from scrapers.listings import (
     EthiopiaRealtyScraper, EthioRealEstatesScraper, LivingEthioScraper,
     RealEthioScraper, JijiScraper
 )
-from scrapers.telegram_scraper import TelegramScraper
 
 logging.basicConfig(
     level=logging.INFO,
@@ -81,8 +80,6 @@ async def run_exporter_async():
         "livingethio": LivingEthioScraper(),
         "realethio": RealEthioScraper(),
         "jiji": JijiScraper(),
-        "telegram_ethio_real_estate": TelegramScraper("telegram_ethio_real_estate"),
-        "telegram_betoch": TelegramScraper("telegram_betoch"),
     }
     
     all_normalized_listings = []

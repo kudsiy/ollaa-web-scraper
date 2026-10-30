@@ -650,9 +650,7 @@ class SemanticProcessingEngine:
     def _extract_contacts(self, text: str) -> List[str]:
         # Ethiopian phone numbers: +251..., 09..., 07...
         phones = re.findall(r'(?:\+251|0)[79]\d{8}', text)
-        # Telegram handles
-        tg_handles = re.findall(r'@[\w\d_]+', text)
-        return list(set(phones + tg_handles))
+        return list(set(phones))
 
     def _extract_floor_level(self, text: str) -> Optional[int]:
         floor_match = re.search(r'(\d+)(?:st|nd|rd|th)?\s*(?:floor|ፎቅ)', text, re.I)

@@ -28,10 +28,6 @@ class EligibilityChecker:
         url = config.get("url")
         if not url:
             return {"status": "invalid", "error": "No URL configured"}
-            
-        if config.get("category") == "telegram":
-            # Basic reachability for telegram preview page
-            url = f"https://t.me/s/{config.get('channel_id')}"
 
         try:
             response = requests.get(url, headers=self.headers, timeout=15)

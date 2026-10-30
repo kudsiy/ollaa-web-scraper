@@ -1,5 +1,5 @@
 """
-Utility for exporting merged Telegram and Web scraper data to a 57-column Google Sheets schema.
+Utility for exporting web scraper data to a 57-column Google Sheets schema.
 """
 import logging
 import csv
@@ -37,7 +37,6 @@ UNIFIED_SCHEMA = [
 class SheetsExporter:
     """
     Exports property listings in the 57-column standardized format.
-    Handles merging of Web and Telegram scraper data.
     """
     def __init__(self, schema: Optional[List[str]] = None):
         self.schema = schema or UNIFIED_SCHEMA
@@ -64,7 +63,7 @@ class SheetsExporter:
             "source_key": normalized_data.get("source_key") or raw_data.get("source_key") or normalized_data.get("source_name", "").lower().replace(" ", ""),
             "source_name": normalized_data.get("source_name"),
             "source_url": normalized_data.get("source_url"),
-            "external_id": raw_data.get("message_id") or raw_data.get("id") or raw_data.get("external_id") or normalized_data.get("external_id"),
+            "external_id": raw_data.get("id") or raw_data.get("external_id") or normalized_data.get("external_id"),
             "title": normalized_data.get("title"),
             "description": normalized_data.get("description"),
             "property_type": normalized_data.get("property_type"),

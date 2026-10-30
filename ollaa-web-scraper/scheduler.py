@@ -40,7 +40,6 @@ from scrapers.listings import (
     EthiopiaRealtyScraper, EthioRealEstatesScraper, LivingEthioScraper,
     RealEthioScraper
 )
-from scrapers.telegram_scraper import TelegramScraper
 from etl.sheets_exporter import SheetsExporter
 from etl.sheets_uploader import SheetsUploader
 
@@ -102,8 +101,6 @@ class ScraperScheduler:
             "ethiorealestates": EthioRealEstatesScraper(),
             "livingethio": LivingEthioScraper(),
             "realethio": RealEthioScraper(),
-            "telegram_ethio_real_estate": TelegramScraper("telegram_ethio_real_estate"),
-            "telegram_betoch": TelegramScraper("telegram_betoch"),
         }
 
 
@@ -187,11 +184,7 @@ class ScraperScheduler:
         schedule.every(scheduler_config.listings_interval_minutes).minutes.do(
             self._run_scraper_group, "listings"
         )
-        
-        schedule.every(30).minutes.do(
-            self._run_scraper_group, "telegram"
-        )
-        
+
         schedule.every(24).hours.do(self._cleanup_old_data)
         
         logger.info("Scheduled jobs registered")
@@ -201,13 +194,12 @@ class ScraperScheduler:
         Run all scrapers in a specific group.
         
         Args:
-            group: Group name ("banks", "tenders", "listings", "telegram")
+            group: Group name ("banks", "tenders", "listings")
         """
         category_map = {
             "banks": ["institutional_auctions", "auction_aggregators"],
             "tenders": ["auction_aggregators"],
             "listings": ["market_listings", "specialized_platforms"],
-            "telegram": ["telegram_channels"]
         }
         
         categories = category_map.get(group, [group])
