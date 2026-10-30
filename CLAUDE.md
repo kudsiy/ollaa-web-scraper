@@ -1,8 +1,12 @@
 # Rules for working on ollaa-web-scraper
 
 Read `STATUS.md` first: it has the audit findings (30 October 2026) and the numbered fix
-list (W1, W2, …). The safety fixes W1–W4 are done; every run that visits websites still
-needs the owner's approval for that run.
+list (W1, W2, …). The safety fixes W1–W4 are done.
+
+**The project is parked** (owner's decision, 31 October 2026, after the Google Sheet check
+in STATUS.md): do not run the scrapers, do not revive them, and do not switch the GitHub
+automation back on unless the owner asks for it in a new decision. Maintenance and offline
+work are fine; every run that visits websites needs the owner's approval for that run.
 
 ## Working with the owner
 

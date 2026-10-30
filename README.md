@@ -17,8 +17,10 @@ Ollaa-Telegram, never here.
 
 ## Status
 
-Parked. The safety fixes are done (no Telegram, offline tests, safe database login, no
-automatic deletion), but every run visits real websites and needs the owner's approval.
+Parked (owner's decision, 31 October 2026): the data collected so far holds only about 154
+usable sale adverts, and nothing new since August. The safety fixes are done (no Telegram,
+offline tests, safe database login, no automatic deletion); every run visits real websites
+and needs the owner's approval.
 See [`STATUS.md`](STATUS.md) for the audit and the fix list, and [`CLAUDE.md`](CLAUDE.md)
 for the working rules.
 
