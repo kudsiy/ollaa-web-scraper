@@ -96,6 +96,16 @@ export of the 154 usable adverts (W14); reviving the scraping is only worth it f
 Property Centre and BetDelala, with the fixes in W14. **Owner's decision (31 October 2026):
 keep it parked.**
 
+## Why so little data: right websites, wrong method (review of 31 October 2026)
+
+Details and sources in `SCRAPING_REVIEW.md`. In short, the main problem is how the project
+scrapes, not which websites: Ethiopia Property Centre, the main Ethiopian property site
+with about 5,000 adverts, is on the list, but a code change on 7 June broke our scraper for
+it, and from 10 August the upload to the sheet failed silently. The scrapers only read the
+summary cards (so most sizes are missing), never save posting dates, guess rent or sale
+badly, save the same advert again and again, and hide failures. Four entries on the list do
+not look like property sites; Jiji gave nothing and Qefira is missing.
+
 ## Copies on this laptop
 
 The real project folder is **`C:\Projects\ollaa-web`**: the only copy connected to GitHub,
@@ -264,9 +274,10 @@ from Ollaa-Telegram's audit), and the Google Sheet (needs the owner's Google log
 | W6 | Set up a project `venv`, pin package versions in `requirements.txt`, document `pip install -r ollaa-web-scraper\requirements.txt` | reproducible set-up on Windows, independent of the owner's own package folder | to do |
 | W7 | Offline tests for the scrapers: save one page per source and test each scraper on the saved page (no internet) | today's tests check only the parsers, the Sheet upload, the Telegram ban and the offline guard, not a single scraper | to do |
 | W8 | Check the Google Sheet and decide: use this project again, or keep it parked. Sheet checked on 31 Oct 2026 (see "What the Google Sheet holds"): 154 usable sale adverts, nothing new since 10 August, tenders and bank auctions not usable, no Telegram adverts. Recommendation: keep parked. **Owner's decision (31 Oct 2026): keep it parked.** Not checked: the 76 database rows | is the data useful? | done 31 Oct 2026 (kept parked) |
-| W9 | Source registry clean-up: honest status per source, remove or implement the 4 sources without a scraper, add `jiji` to the scheduler, remove unused scraper files (with owner approval) | runs only what works | to do |
+| W9 | Source registry clean-up: honest status per source; remove the 4 sources without a scraper (`zegebeya`, `afrobet`, `etrealtor`, `ethiopianproperties`: no property site found under these names, see `SCRAPING_REVIEW.md`); add `jiji` to the scheduler; remove unused scraper files (with owner approval) | runs only what works | to do |
 | W10 | Write a short README (what, how to run, how not to run). Added `README.md` (top folder): what the project does, its status, outputs, folders, set-up, the offline test command, the live commands (only with approval; the exporter starts as `python -m etl.unified_exporter`, because `python etl/unified_exporter.py` cannot find its modules on Windows) and a "never" list. Also added `exports/` and `results.txt` to `.gitignore`: the scheduler's daily CSV and its fallback results file hold scraped adverts and were not ignored | for the owner and future sessions | done 30 Oct 2026 |
 | W11 | GitHub clean-up, with the owner's approval of the exact list. Every branch was first copied to `backups/branches_before_W11_2026-10-30.bundle` (ignored by git; checked complete) and checked: 24 were inside `main`'s history, and 8 early ones (11–15 May) were carried into `main` (each is part of the 15 May branch, whose latest files are all in `main`). The one with work that never reached `main`, `cto/validate-ollaa-scrapers-end-to-end` (a closed "WIP" attempt of 11 May, pull request #2), was also deleted, on the owner's decision. Deleted 33 branches on GitHub (6 finished task branches, 27 old `cto/*`) and 7 on this laptop (including `master`); `main` is now the only branch. Restore one with `git fetch backups/branches_before_W11_2026-10-30.bundle refs/remotes/origin/<name>:refs/heads/<name>` | tidy, removes the old password from every branch | done 30 Oct 2026 |
 | W12 | Old copies: owner deletes the copies listed above (keep the 5 May zip only if the PPAA scraper is wanted) | removes the old password from the laptop | to do (owner) |
 | W13 | Only if W8 says "use it": fix the Linux save path in the two `tools/live_*.py` scripts, then one supervised live test run of a single website source, then decide about re-enabling the GitHub automation | first real run after the fixes | not planned (project parked, 31 Oct 2026) |
 | W14 | Only if the owner wants web prices for the thesis: either export the 154 usable sale adverts once into a clean file (no phone numbers, never committed), or revive only Ethiopia Property Centre and BetDelala after fixing three things: phone numbers read as prices, the same advert added again and again, and missing posting dates | more sale prices for the hedonic model | not planned (project parked, 31 Oct 2026) |
+| W15 | Only if the owner un-parks the project: a small pilot on Ethiopia Property Centre only (see `SCRAPING_REVIEW.md`, section 3). First check its `robots.txt` and terms, or ask it for an academic data extract; owner opens one GitHub run log after 10 August to see why uploads failed; with approval, look at 2–3 of its pages once; then read each advert's own page (size, place, "Added on" date), avoid repeats by the advert link, count rows per site and warn at zero, fix the backup price reader ("120 m2" read as 120 million), and test offline on saved pages before one supervised run | many more usable sale adverts than today's 154, if the site allows it | not planned (project parked, 31 Oct 2026) |
