@@ -9,3 +9,6 @@ ollaa-web-scraper/credentials.json
 ollaa-web-scraper/ollaa-web-scraper/credentials.json
 ollaa-web-scraper/property_data.json
 ollaa-web-scraper/property_data_unified.csv
+# Scraped adverts hold other people's phone numbers: never commit them (task W10)
+ollaa-web-scraper/exports/
+ollaa-web-scraper/results.txt

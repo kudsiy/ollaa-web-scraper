@@ -96,7 +96,7 @@ Ollaa-Telegram; decide about them in an Ollaa-Telegram session.
 **Only with the owner's approval.** The safety fixes W1–W4 are done, but every run of
 `scheduler.py`, `etl/unified_exporter.py` or a scraper visits real websites and needs the
 owner's approval for that run: first decide whether the project is wanted (W8), then one
-supervised test run (W13).
+supervised test run (W13). Set-up and the exact commands are in `README.md`.
 
 What is safe now: the offline tests, from `C:\Projects\ollaa-web\ollaa-web-scraper` (the
 laptop's normal Python already has the packages):
@@ -204,7 +204,8 @@ from Ollaa-Telegram's audit), and the Google Sheet (needs the owner's Google log
 8. **Windows set-up.** The top-level `requirements.txt` and `__init__.py` are Linux links;
    on Windows they are one-line text files, so `pip install -r requirements.txt` from the
    top folder fails. Package versions are not pinned (`>=`), unlike Ollaa-Telegram.
-9. **Housekeeping.** No README or how-to-run guide (the old README was removed). 27 old
+9. **Housekeeping.** No README or how-to-run guide (the old README was removed; a new one
+   was added by W10). 27 old
    `cto/*` branches on GitHub. The folder's git identity is "Antigravity"; 13 old commits
    show the owner's personal e-mail address publicly.
 
@@ -212,7 +213,6 @@ from Ollaa-Telegram's audit), and the Google Sheet (needs the owner's Google log
 
 - A record of when each source was last checked, and an honest status per source.
 - Pinned package versions and a project `venv`.
-- A README in simple words.
 
 ## Fix list (one session each, in this order)
 
@@ -227,7 +227,7 @@ from Ollaa-Telegram's audit), and the Google Sheet (needs the owner's Google log
 | W7 | Offline tests for the scrapers: save one page per source and test each scraper on the saved page (no internet) | today's tests check only the parsers, the Sheet upload, the Telegram ban and the offline guard, not a single scraper | to do |
 | W8 | Owner opens the Google Sheet (ID in `.github/workflows/sync_to_sheets.yml`) and the 76 database rows, and decides: use this project again, or keep it parked. Also decide whether to delete the old Telegram adverts there (source names "Ethio Real Estate Telegram", "Betoch Telegram"; backup first) | is the data useful? | to do (owner) |
 | W9 | Source registry clean-up: honest status per source, remove or implement the 4 sources without a scraper, add `jiji` to the scheduler, remove unused scraper files (with owner approval) | runs only what works | to do |
-| W10 | Write a short README (what, how to run, how not to run) | for the owner and future sessions | to do |
+| W10 | Write a short README (what, how to run, how not to run). Added `README.md` (top folder): what the project does, its status, outputs, folders, set-up, the offline test command, the live commands (only with approval; the exporter starts as `python -m etl.unified_exporter`, because `python etl/unified_exporter.py` cannot find its modules on Windows) and a "never" list. Also added `exports/` and `results.txt` to `.gitignore`: the scheduler's daily CSV and its fallback results file hold scraped adverts and were not ignored | for the owner and future sessions | done 30 Oct 2026 |
 | W11 | GitHub clean-up: delete old merged `cto/*` branches and the local `master` branch (owner approval) | tidy, fewer copies of history | to do |
 | W12 | Old copies: owner deletes the copies listed above (keep the 5 May zip only if the PPAA scraper is wanted) | removes the old password from the laptop | to do (owner) |
 | W13 | Only if W8 says "use it": fix the Linux save path in the two `tools/live_*.py` scripts, then one supervised live test run of a single website source, then decide about re-enabling the GitHub automation | first real run after the fixes | to do |

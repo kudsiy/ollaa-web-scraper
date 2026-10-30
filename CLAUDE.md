@@ -114,6 +114,8 @@ Ollaa-Telegram scraper depends on it. Protecting it comes before everything else
 
 ## How the project runs
 
+- `README.md` (top folder) explains the project, set-up and commands in simple words.
+  Keep it true: update it in the same task whenever commands, folders or settings change.
 - `source_registry.py`: the list of website sources (bank auctions, tender sites, property
   sites) and their status.
 - `scrapers/`: one scraper per source (`banks/`, `tenders/`, `listings/`), built on
