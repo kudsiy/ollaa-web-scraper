@@ -54,9 +54,9 @@ It is a **scraper only**: there is no website or app for visitors.
 Not for Ollaa-Telegram: nothing there depends on it, and Ollaa-Telegram works without it.
 
 It is worth **keeping, parked**: it is the only source of bank-auction and website prices,
-which could support valuation work later, and keeping it on GitHub costs nothing. Do not run
-the scheduler until W4 is done. Whether to use it again is the owner's decision after looking at
-what it produced (task W8).
+which could support valuation work later, and keeping it on GitHub costs nothing. The safety
+fixes W1–W4 are done. Whether to use it again is the owner's decision after looking at what
+it produced (task W8).
 
 ## Copies on this laptop
 
@@ -93,9 +93,10 @@ Ollaa-Telegram; decide about them in an Ollaa-Telegram session.
 
 ## How to run it
 
-**Not yet.** Until W4 is done, do not run `scheduler.py` (it deletes old rows every day).
-Every run of `scheduler.py`, `etl/unified_exporter.py` or a scraper visits real websites
-and needs the owner's approval for that run (W8, W13).
+**Only with the owner's approval.** The safety fixes W1–W4 are done, but every run of
+`scheduler.py`, `etl/unified_exporter.py` or a scraper visits real websites and needs the
+owner's approval for that run: first decide whether the project is wanted (W8), then one
+supervised test run (W13).
 
 What is safe now: the offline tests, from `C:\Projects\ollaa-web\ollaa-web-scraper` (the
 laptop's normal Python already has the packages):
@@ -151,6 +152,11 @@ checked: an actual login to the database (that needs a connection; the first app
 will show it). `ollaa_user` already owns `web_scraped_listings`: Ollaa-Telegram's task S9
 gave it every table in the database.
 
+After W4 (no automatic deletion): **41 tests pass** (the 36 above plus 5 in
+`tests/test_no_deletion.py`). The same 5 tests run on the code before W4 fail 4 times
+(deleting SQL found, delete function present, a clean-up timer in the scheduler, a
+60-column sheet shrunk to 57), so they really catch the problem.
+
 Not checked, on purpose: any scraper against a real website, the Telegram reader (now
 removed), the database (a read-only count was blocked by the session's safety settings; the 76 rows come
 from Ollaa-Telegram's audit), and the Google Sheet (needs the owner's Google login).
@@ -173,8 +179,10 @@ from Ollaa-Telegram's audit), and the Google Sheet (needs the owner's Google log
    set; it did not read a `.env` file, and its setting names (`OLLAADB_*`) differed from
    Ollaa-Telegram's (`DB_*`). Now it reads `.env`, uses `DB_*` and `ollaa_user`, has no
    default password, and refuses `postgres`.
-4. **Automatic deletion.** `scheduler.py` deletes every `web_scraped_listings` row older
-   than 90 days, once a day, with no backup.
+4. **Automatic deletion (fixed by W4).** `scheduler.py` deleted every
+   `web_scraped_listings` row older than 90 days, once a day, with no backup. The Google
+   Sheet upload also shrank any sheet with more than 57 columns back to 57, deleting
+   whatever was in the extra columns. Both are gone; nothing deletes data automatically.
 5. **Old password on GitHub.** `START_OLLAA.bat` (in GitHub's history from 9 to 13 May)
    contains the old database password. It was deleted from `main` on 13 May but is still
    readable in 4 old branches (`cto/end-to-end-validation-ollaa-scrapers`,
@@ -213,7 +221,7 @@ from Ollaa-Telegram's audit), and the Google Sheet (needs the owner's Google log
 | W1 | Telegram: remove everything Telegram-related (owner's decision: Telegram is Ollaa-Telegram's job). Removed `scrapers/telegram_scraper.py`, the two channels in `source_registry.py`, their entries and the 30-minute Telegram timer in `scheduler.py` and `etl/unified_exporter.py`, the `t.me` check in `eligibility_checker.py`, the `@username` ("Telegram handle") reading in `parsers/semantic_engine.py` (phone numbers are still read), the Telegram `message_id` fallback in `etl/normalizer.py` and `etl/sheets_exporter.py` (web listings never had one, so their duplicate fingerprints do not change), and the Telegram comments in `requirements.txt`. Added `tests/test_no_telegram.py`, which fails if a Telegram source or Telegram code comes back. The 57 Sheet columns are unchanged | protects the Telegram account; one project per job | done 30 Oct 2026 (24 offline tests pass) |
 | W2 | Make `pytest` offline-only. Moved the two live diagnostics to `tools/live_diagnostic.py` and `tools/live_quick_diagnostic.py` (names no tool collects; they refuse to start without `--live`; removed the hidden pytest hook), added `ollaa-web-scraper/pytest.ini` (tests in `tests/` only), and `tests/conftest.py`, which blocks the internet, the database and the browser for every test, checked by `tests/test_offline_guard.py` | stops accidental scraping | done 30 Oct 2026 (29 offline tests pass) |
 | W3 | Settings: `config.py` reads `.env` from the top folder (`python-dotenv`, added to `requirements.txt`), the same `DB_*` names as Ollaa-Telegram, login `ollaa_user`, no default password; `etl/db_writer.py` refuses to connect without `DB_PASSWORD` or as `postgres`; removed an unused line that wrote the password into a database address; added `.env.example`, `tests/test_settings.py`, and this laptop's `.env` (everyday login copied from Ollaa-Telegram's `.env`, values not shown) | safe database login | done 30 Oct 2026 (36 offline tests pass) |
-| W4 | Remove the daily 90-day delete (or make it a report only) | no silent data loss | to do |
+| W4 | Remove the daily 90-day delete. Removed the scheduler's daily clean-up job and `DBWriter.delete_old_listings` (old listings are price history; deleting is a manual step for the owner, after a backup). Also in the Google Sheet upload: the sheet still grows to 57 columns but is never shrunk, and only the first 57 header cells are checked, so extra columns are kept. Added `tests/test_no_deletion.py` | no silent data loss | done 30 Oct 2026 (41 offline tests pass) |
 | W5 | Old password on GitHub: owner confirms it is not used anywhere else; then either accept it (it is retired) or delete the 4 old branches and ask GitHub Support to remove the 4 pull-request copies | public history | to do (owner decision) |
 | W6 | Set up a project `venv`, pin package versions in `requirements.txt`, document `pip install -r ollaa-web-scraper\requirements.txt` | reproducible set-up on Windows, independent of the owner's own package folder | to do |
 | W7 | Offline tests for the scrapers: save one page per source and test each scraper on the saved page (no internet) | today's tests check only the parsers, the Sheet upload, the Telegram ban and the offline guard, not a single scraper | to do |

@@ -1,7 +1,8 @@
 # Rules for working on ollaa-web-scraper
 
 Read `STATUS.md` first: it has the audit findings (30 October 2026) and the numbered fix
-list (W1, W2, …). W1–W3 are done; W4 must be done before `scheduler.py` is run.
+list (W1, W2, …). The safety fixes W1–W4 are done; every run that visits websites still
+needs the owner's approval for that run.
 
 ## Working with the owner
 
@@ -101,8 +102,10 @@ Ollaa-Telegram scraper depends on it. Protecting it comes before everything else
   audit). Never read from or write to Ollaa-Telegram's tables (`telegram_listings`,
   `processed_listings`, `rental_listings`, `media_queue`, `listing_overrides`,
   `processing_exclusions` and the rest).
-- `scheduler.py` deletes rows older than 90 days from `web_scraped_listings` every day
-  (`_cleanup_old_data`). Until W4 is done, do not run the scheduler.
+- Nothing in this project deletes data automatically (task W4, checked by
+  `tests/test_no_deletion.py`): no `DELETE`, `TRUNCATE` or `DROP`, and the Google Sheet is
+  never cleared or shrunk. Old listings are price history. Deleting is a manual step for
+  the owner, after a backup. Never add automatic deletion back.
 - Before any task that changes data, take a backup (the `pg_dump` command in
   Ollaa-Telegram's `CLAUDE.md`), count the rows before and after, and report both numbers.
 - Ollaa-Telegram's `database/schema.sql` describes the whole database, including

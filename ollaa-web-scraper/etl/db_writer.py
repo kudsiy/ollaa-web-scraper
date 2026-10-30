@@ -375,31 +375,3 @@ class DBWriter:
         except Exception as e:
             logger.error(f"Error fetching listing stats: {e}")
             return {}
-    
-    def delete_old_listings(self, days: int = 90) -> int:
-        """
-        Delete listings older than specified days.
-        
-        Args:
-            days: Delete listings older than this many days
-            
-        Returns:
-            Number of deleted listings
-        """
-        try:
-            with self.get_connection() as conn:
-                with conn.cursor() as cursor:
-                    cursor.execute("""
-                        DELETE FROM web_scraped_listings 
-                        WHERE scraped_at < CURRENT_TIMESTAMP - INTERVAL '%s days'
-                    """, (days,))
-                    
-                    deleted = cursor.rowcount
-                    conn.commit()
-                    
-                    logger.info(f"Deleted {deleted} old listings")
-                    return deleted
-                    
-        except Exception as e:
-            logger.error(f"Error deleting old listings: {e}")
-            return 0

@@ -89,9 +89,10 @@ class SheetsUploader:
                 logger.info(f"Worksheet '{sheet_name}' not found. Creating it.")
                 self.worksheet = self.spreadsheet.add_worksheet(title=sheet_name, rows="100", cols="57")
 
-            # Ensure sheet has exactly 57 columns for the unified schema
-            if self.worksheet.col_count != 57:
-                logger.info(f"Sheet has {self.worksheet.col_count} columns. Resizing to 57.")
+            # Ensure sheet has at least 57 columns for the unified schema. Never shrink it:
+            # that would delete whatever is kept in extra columns (task W4).
+            if self.worksheet.col_count < 57:
+                logger.info(f"Sheet has {self.worksheet.col_count} columns. Adding columns up to 57.")
                 self.worksheet.resize(cols=57)
 
             # Verify and fix headers in row 1
@@ -117,8 +118,8 @@ class SheetsUploader:
         except Exception:
             existing_headers = []
 
-        # Force match check: if length or content doesn't match UNIFIED_SCHEMA
-        if len(existing_headers) != 57 or existing_headers != list(UNIFIED_SCHEMA):
+        # Only the first 57 columns belong to UNIFIED_SCHEMA; columns after them are left alone
+        if existing_headers[:57] != list(UNIFIED_SCHEMA):
             logger.info(f"Headers do not match UNIFIED_SCHEMA (found {len(existing_headers)} cols). Overwriting immediately.")
             self.worksheet.update('A1:BE1', [UNIFIED_SCHEMA], value_input_option='RAW')
             logger.info("Headers updated successfully.")

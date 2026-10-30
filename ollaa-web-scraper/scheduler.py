@@ -185,8 +185,8 @@ class ScraperScheduler:
             self._run_scraper_group, "listings"
         )
 
-        schedule.every(24).hours.do(self._cleanup_old_data)
-        
+        # No clean-up job: old listings are price history and are never deleted
+        # automatically (task W4).
         logger.info("Scheduled jobs registered")
     
     def _run_scraper_group(self, group: str) -> None:
@@ -340,15 +340,6 @@ class ScraperScheduler:
         
         if len(self._scrape_history) > 1000:
             self._scrape_history = self._scrape_history[-500:]
-    
-    def _cleanup_old_data(self) -> None:
-        """Clean up old data from database."""
-        try:
-            logger.info("Running scheduled cleanup")
-            deleted = self.db_writer.delete_old_listings(days=90)
-            logger.info(f"Cleanup completed: {deleted} old listings deleted")
-        except Exception as e:
-            logger.error(f"Error during cleanup: {e}")
     
     def start(self) -> None:
         """Start the scheduler in a background thread."""
