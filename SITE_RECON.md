@@ -58,6 +58,27 @@ data from the owner).
 - Whether **shegahome** and **zegebeya** are really property-listing sites and how big.
 - Whether **afrobet.com** is a property site at all.
 
+## First pilot: BetDelala (1 November 2026)
+
+50 listing pages, sampled evenly across the 4,067 in the sitemap, read once each, 5 seconds
+apart, honest user agent, read-only. No blocks and no errors. Price and currency came from
+each page's `ld+json` block; bedrooms, size and place from the page URL and text. Results
+saved to a local file only (no phone numbers, no descriptions, never committed).
+
+| Field | Filled | Note |
+|---|---|---|
+| price | 50/50 (100%) | all in ETB, clean numbers from `ld+json` — none were phone numbers |
+| size (m²) | 50/50 (100%) | from the URL and page text |
+| location | ~36/50 (~72%) | my quick parser got 30%; a proper read of the page's location field would get most |
+| bedrooms | 35/50 (70%) | — |
+| price + size + location together | ~30–72% | depends only on the location parser, which is easy to improve |
+
+Of the 50: 38 sale, 12 rent, all ETB. Median sale price per m² about **106,000 ETB**.
+
+This is far better than the old data (where size was known for only 37% of EPC rows), and it
+needed no Scrapy, no browser and no blocked API — just the sitemap and the page's own
+`ld+json`. It confirms BetDelala as the best first source and that the method works.
+
 ## Method order (from the plan)
 1. Sitemap → the list of every listing page.
 2. The site's own JSON data in the page or a public endpoint its pages read (not a forbidden
