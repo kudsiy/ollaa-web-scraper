@@ -79,6 +79,44 @@ This is far better than the old data (where size was known for only 37% of EPC r
 needed no Scrapy, no browser and no blocked API — just the sitemap and the page's own
 `ld+json`. It confirms BetDelala as the best first source and that the method works.
 
+## Second pilot: the other GO sites (1 November 2026)
+
+~30 listings each, sampled across each sitemap, read politely (honest UA, 4 s apart,
+read-only), stopping at the first block or error. Price/size/location taken from each page's
+`ld+json` when present, else visible text and the URL. No site was bypassed.
+
+| Site | Listings in sitemap | Sampled | Price | Size | Location | Currency | Verdict |
+|---|---|---|---|---|---|---|---|
+| **realethio.com** | 1,728 | 30 | 100% | 100% | 96% | **mostly USD** (29/30) | works well; but priced in US dollars |
+| **ethiopiarealty.com** | 1,594 | 30 | 100% | 93% | 60% | ETB | **works well, in birr** |
+| **ethiopianproperties.com** | 895 | 30 | 83% | 3%* | 83% | **USD** ($) | good except size (*parser miss, not the site); US dollars |
+| **livingethio.com** | 2,009 | 30 | 30% | 0%* | 0%* | mixed | inconclusive — needs a site-specific parser |
+| **ethiorealestates.com** | — | — | — | — | — | — | inconclusive — listings are behind its Supabase API, not the plain sitemap |
+| **shegahome.com** | 18 | 1 | — | — | — | — | inconclusive — HTTP 500 on the 2nd page; small sitemap |
+| **ethiopiapropertycentre.com** | (nested index) | 3 | 0% | 0% | — | — | inconclusive — my crawler found only 3 index pages, not real listings; did **not** challenge this time |
+
+`*` A 0–3% size or location figure here is my quick general parser missing a site's layout,
+not the site lacking the data. Those sites need a short site-specific parser before a real
+verdict.
+
+### What this tells us
+- **The method clearly works** on BetDelala, realethio and ethiopiarealty: near-complete
+  price and size straight from structured data, no blocks, no bypass.
+- **Currency is the catch for the thesis.** realethio and ethiopianproperties quote mostly
+  **US dollars**. Ollaa-Telegram's hedonic model uses birr only and drops USD listings, so
+  the directly comparable birr inventory is **BetDelala + ethiopiarealty** (both ETB), plus
+  the ETB share of the others. USD listings can still be kept for reference or converted at
+  a stated rate, but that is the owner's call.
+- **Four sites are inconclusive**, not dead: livingethio and ethiopianproperties need a
+  small size/price parser for their layout; Ethio Real Estates needs its Supabase JSON
+  endpoint (cleaner anyway); shegahome looks small and returned a server error; EPC needs
+  its nested sitemap followed properly (and still must be treated as GO-cautious).
+
+### Rough reachable birr inventory (very approximate)
+BetDelala ~4,067 (sale + rent) and ethiopiarealty ~1,594, both in ETB, are the solid core —
+already several times the 154 usable adverts in the old Google Sheet. realethio (~1,728) and
+ethiopianproperties (~895) add more if USD is acceptable or converted.
+
 ## Method order (from the plan)
 1. Sitemap → the list of every listing page.
 2. The site's own JSON data in the page or a public endpoint its pages read (not a forbidden
