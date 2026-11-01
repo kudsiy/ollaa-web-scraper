@@ -29,6 +29,9 @@ entries on the list do not look like property sites at all.
 - **Four entries look wrong:** `zegebeya.com`, `afrobet.com`, `etrealtor.com.et` and
   `ethiopianproperties.com` never had a scraper, and a web search found no property site
   under these names (`afrobet` sounds like a betting site). They should be removed.
+  *(Update, W16 recon 1 Nov 2026: `ethiopianproperties.com` is in fact a real, permissive
+  WordPress property site and should be kept; `etrealtor.com.et` is down; `afrobet.com` and
+  `zegebeya.com` are still unconfirmed as property sites. See `SITE_RECON.md`.)*
 - **Tender sites** carry all kinds of public purchases. Only bank auction notices ("ሐራጅ")
   matter for property, and their prices are in notice texts or PDFs. **Banks** publish few
   notices; the Development Bank of Ethiopia has an auction page, and a scraper for it
@@ -93,6 +96,12 @@ were not used. Getting around such a check (pretending to be a normal browser, o
 headless browser that passes the test) is not done in this project: it is against the
 site's clear wish. When the protection was added is not known; it may have helped stop our
 old scraper.
+
+*(Update, W16 recon 1 Nov 2026: on a later try the EPC homepage and `robots.txt` answered
+HTTP 200, and the robots file in fact **allows** crawling, even AI bots, except a
+report-creation path. So the block is an **intermittent** Cloudflare challenge, not a
+permanent or rules-based ban. EPC is therefore GO-cautious: try politely through its
+sitemap and stop at the first challenge, never forcing it. See `SITE_RECON.md`.)*
 
 What remains possible for Ethiopia Property Centre: ask the site for an academic data
 extract (the owner sends the request), or cite its published average-price reports, read by

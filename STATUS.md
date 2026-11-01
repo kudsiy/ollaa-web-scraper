@@ -103,8 +103,12 @@ scrapes, not which websites: Ethiopia Property Centre, the main Ethiopian proper
 with about 5,000 adverts, is on the list, but a code change on 7 June broke our scraper for
 it, and from 10 August the upload to the sheet failed silently. The scrapers only read the
 summary cards (so most sizes are missing), never save posting dates, guess rent or sale
-badly, save the same advert again and again, and hide failures. Four entries on the list do
-not look like property sites; Jiji gave nothing and Qefira is missing.
+badly, save the same advert again and again, and hide failures. A recon of candidate sites
+on 1 November 2026 (task W16, `SITE_RECON.md`) refined this: about 8 sites are reachable and
+allow crawling (BetDelala, with a 4,076-page sitemap, is the best; five WordPress sites and
+EPC follow), Jiji is an ASK (its terms, not robots, are the blocker), and engocha/qefira/
+etrealtor are walled or down. EPC's own rules in fact allow crawling; its wall is an
+intermittent Cloudflare challenge, which we never force.
 
 ## Copies on this laptop
 
@@ -281,3 +285,4 @@ from Ollaa-Telegram's audit), and the Google Sheet (needs the owner's Google log
 | W13 | Only if W8 says "use it": fix the Linux save path in the two `tools/live_*.py` scripts, then one supervised live test run of a single website source, then decide about re-enabling the GitHub automation | first real run after the fixes | not planned (project parked, 31 Oct 2026) |
 | W14 | Only if the owner wants web prices for the thesis: either export the 154 usable sale adverts once into a clean file (no phone numbers, never committed), or revive only Ethiopia Property Centre and BetDelala after fixing three things: phone numbers read as prices, the same advert added again and again, and missing posting dates | more sale prices for the hedonic model | not planned (project parked, 31 Oct 2026) |
 | W15 | Only if the owner un-parks the project: a small pilot on Ethiopia Property Centre only (see `SCRAPING_REVIEW.md`, section 3). First check its `robots.txt` and terms, or ask it for an academic data extract; owner opens one GitHub run log after 10 August to see why uploads failed; with approval, look at 2–3 of its pages once; then read each advert's own page (size, place, "Added on" date), avoid repeats by the advert link, count rows per site and warn at zero, fix the backup price reader ("120 m2" read as 120 million), and test offline on saved pages before one supervised run. **Started by the owner on 31 Oct 2026 and stopped at the first request**: the site answered `robots.txt` with HTTP 403 and a Cloudflare bot check, so it blocks automated readers; not got around (see `SCRAPING_REVIEW.md`, section 4). Left: ask the site for an academic data extract, or cite its average-price reports | many more usable sale adverts than today's 154, if the site allows it | stopped: site blocks automated readers |
+| W16 | Owner un-parked the project on 1 Nov 2026 for a legitimate multi-site plan (sitemaps / page JSON / Scrapy / Playwright; never bypass bot protection). Read-only recon done (`SITE_RECON.md`): GO / ASK / NO table for 16 candidate sites. Next, on the owner's pick: a ~50-listing pilot per GO site (BetDelala first), showing price/size/place fill rates, to a local file first. Still needs approval: installing Scrapy, and writing to the database. On EPC the recon found robots.txt permits crawling (the earlier 403 was an intermittent Cloudflare challenge), so it is GO-cautious, not a flat block | grow the dataset from sites that allow it | recon done; pilots await owner's pick |
