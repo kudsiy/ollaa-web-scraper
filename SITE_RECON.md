@@ -124,17 +124,21 @@ read-only, stops at the first block or error, a daily cap of 500 per site, and a
 each run continues where the last stopped. Structured fields only go to a local CSV per site
 (`saved_pages/<site>/full.csv`); no phone numbers, no descriptions, never committed.
 
-First batch, 1 November 2026 (no blocks, no errors):
+Progress to 2 November 2026 (no blocks):
 
 | Site | Done / total | Price | Size | Location | Bedrooms |
 |---|---|---|---|---|---|
-| betdelala | 200 / 4,059 | 100% | 97% | 98% (raw text, needs tidying into sub-city codes) | 78% |
-| ethiopiarealty | 200 / 1,594 | 100% | 97% | 22% (its sub-city is in the page text, not the URL) | 32% |
+| betdelala | **1,000 / 4,077** | 100% | 99% | 99% (raw text, needs tidying into sub-city codes) | 80% |
+| ethiopiarealty | **510 / 1,594** | 100% | 98% | ~40–58% (rest is in the page text, not the URL) | ~35% |
+
+**1,510 listings so far — about 10× the 154 usable adverts in the old Google Sheet.**
 
 Notes:
-- The scrape is **not finished**: ~3,859 BetDelala and ~1,394 ethiopiarealty pages remain, to
+- The scrape is **not finished**: ~3,077 BetDelala and ~1,084 ethiopiarealty pages remain, to
   be read over later runs within the daily cap (a few days at 500/site/day; the cap can be
   raised if the owner wants).
+- **ethiopiarealty was timing out** at 3–6 s spacing (the site throttling us). Slowing to
+  8–15 s pauses fixed it: 200 read with no error. Its scrape runs gently from now on.
 - **Location still needs normalizing.** BetDelala's location text is messy
   ("… 6 bedroom 250 sqm lebu addis ababa") and ethiopiarealty's is mostly missing from the
   URL. Both get resolved to Ollaa-Telegram's sub-city codes when the data is mapped and
