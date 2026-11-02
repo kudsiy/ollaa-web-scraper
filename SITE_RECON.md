@@ -146,6 +146,33 @@ Notes:
   the same `locations.py` rules and will recover ethiopiarealty's places too.
 - **Currency** is ETB for both, as expected.
 
+## Step 4: database load — prepared, not yet run (2 November 2026)
+
+The scraped CSVs were transformed **offline** into one clean, load-ready file, reusing
+Ollaa-Telegram's own `src/locations.py` (imported read-only, no database) so the places use
+the **same sub-city codes** as the Telegram data.
+
+From the 1,510 scraped listings:
+- **921 (60%) mapped to a real sub-city** (not "other_addis"); top areas Bole, Ayat,
+  Kazanchis, CMC, Meskel Flower, Bole Bulbula.
+- **905 (59%) are usable for the hedonic model** — ETB price + size + a real sub-city.
+  That is already about **6× the 154 usable adverts** in the old Google Sheet, and the
+  scrape is only ~29% done.
+- 807 sale, 703 rent; **293 probable cross-site duplicates are flagged but kept** (not
+  deleted), so the owner decides whether to merge them.
+
+The loader is `etl/load_web_listings.py`. It creates a **new** table `web_listings` (a
+`source` column, keyed by `content_hash`) and inserts with `ON CONFLICT DO NOTHING`. It
+**never** touches the sister project's tables, contains no delete/drop, connects as the
+everyday login `ollaa_user`, and does nothing twice. Run without arguments it only
+validates (no database); `--apply` does the load.
+
+**Not yet run.** Writing to the live `ollaa` database needs the owner's approval and a
+backup first, and this environment blocked an earlier database access, so the `--apply` run
+may need the owner to allow database access or run it themselves. The load-ready file lives
+at `saved_pages/_load/web_listings_loadready.csv` (git-ignored; structured fields only, no
+phone numbers).
+
 ## Method order (from the plan)
 1. Sitemap → the list of every listing page.
 2. The site's own JSON data in the page or a public endpoint its pages read (not a forbidden
