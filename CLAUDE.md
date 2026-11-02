@@ -113,10 +113,14 @@ Ollaa-Telegram scraper depends on it. Protecting it comes before everything else
 ## Database safety
 
 - This project uses the same PostgreSQL 18 database `ollaa` on this laptop as
-  Ollaa-Telegram, but only its own table `web_scraped_listings` (76 rows at Ollaa-Telegram's
-  audit). Never read from or write to Ollaa-Telegram's tables (`telegram_listings`,
-  `processed_listings`, `rental_listings`, `media_queue`, `listing_overrides`,
-  `processing_exclusions` and the rest).
+  Ollaa-Telegram, and writes only to its own tables: `web_scraped_listings` (the old scraper)
+  and `web_listings` (the multi-site data, task W16). Never write to or change the sister
+  project's tables (`telegram_listings`, `processed_listings`, `rental_listings`,
+  `media_queue`, `listing_overrides`, `processing_exclusions` and the rest). Reading them is
+  allowed only read-only and only when the owner asks (as in the W16 web↔Telegram duplicate
+  check); never modify them.
+- **Do not run any database operation between 10:00 and 12:00** (the owner's scheduled
+  Telegram scraper runs then; owner, 2 November 2026). Never schedule DB jobs in that window.
 - Nothing in this project deletes data automatically (task W4, checked by
   `tests/test_no_deletion.py`): no `DELETE`, `TRUNCATE` or `DROP`, and the Google Sheet is
   never cleared or shrunk. Old listings are price history. Deleting is a manual step for
