@@ -85,8 +85,12 @@ def run(label, sitemap, batch):
             rec["source"] = label
             rec["scraped_at"] = datetime.datetime.now().isoformat(timespec="seconds")
             w.writerow({k: rec.get(k, "") for k in FIELDS})
+            fh.flush()  # save every row at once: a run cut off part-way loses nothing
             dl.write(f"{datetime.date.today().isoformat()}\t{u}\n")
+            dl.flush()
             rows.append(rec)
+            if i % 25 == 0:
+                print(f"  ... {i}/{len(todo)} done", flush=True)
 
     n = len(rows)
     print(f"  fetched {n} this run" + (f"; STOPPED: {stopped}" if stopped else ""))
