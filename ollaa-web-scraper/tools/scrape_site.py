@@ -1,7 +1,9 @@
 """Resumable, capped, polite full scrape of a GO site (task W16, owner approved the birr
 sites 1 Nov 2026). Reuses the recon helpers. For each site: gather listing URLs from the
 sitemap, skip the ones already done, read up to BATCH new ones with a random 3-6 s pause,
-honest UA, read-only, and STOP at the first block, challenge or error (never bypass).
+honest UA, read-only, and STOP at the first block, challenge or error (never bypass). A
+connection drop or timeout is retried once after a minute (owner, 13 Nov 2026); a second
+failure in a row stops the run, and a block, challenge or bad status is never retried.
 Appends structured fields only (no phone numbers, no descriptions) to a local CSV, and
 records done URLs so the next run continues. A daily cap keeps the load light.
 
@@ -25,6 +27,23 @@ DAILY_CAP = 500  # per site per day, polite
 GAP_MIN = float(os.getenv("OLLAA_GAP_MIN", "3"))  # seconds between requests (raise for flaky sites)
 GAP_MAX = float(os.getenv("OLLAA_GAP_MAX", "6"))
 FIELDS = ["source", "url", "price", "currency", "area_sqm", "bedrooms", "place", "listing_type", "scraped_at"]
+RETRY_WAIT = 60  # seconds before the one retry after a connection drop or timeout
+TRANSIENT = (requests.exceptions.ConnectionError, requests.exceptions.Timeout)
+
+
+def fetch_with_one_retry(url):
+    """Get a page; on a connection drop or timeout wait RETRY_WAIT s and try once more.
+    Returns (response, None) or (None, error text). Nothing else is retried."""
+    for attempt in (1, 2):
+        try:
+            return requests.get(url, headers={"User-Agent": pg.UA}, timeout=25), None
+        except TRANSIENT as e:
+            if attempt == 2:
+                return None, f"{e!r} (after one retry)"
+            print(f"  connection problem ({type(e).__name__}); waiting {RETRY_WAIT} s, then one retry", flush=True)
+            time.sleep(RETRY_WAIT)
+        except Exception as e:  # noqa: BLE001
+            return None, repr(e)
 
 
 def today_count(done_log):
@@ -70,10 +89,9 @@ def run(label, sitemap, batch):
             w.writeheader()
         for i, u in enumerate(todo, 1):
             time.sleep(random.uniform(GAP_MIN, GAP_MAX))
-            try:
-                r = requests.get(u, headers={"User-Agent": pg.UA}, timeout=25)
-            except Exception as e:  # noqa: BLE001
-                stopped = f"error at #{i}: {e!r}"
+            r, err = fetch_with_one_retry(u)
+            if r is None:
+                stopped = f"error at #{i}: {err}"
                 break
             if pg.blocked(r):
                 stopped = f"block/challenge at #{i} (HTTP {r.status_code}) — stopping, not bypassing"

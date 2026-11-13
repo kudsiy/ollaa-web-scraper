@@ -59,6 +59,10 @@ Ollaa-Telegram scraper depends on it. Protecting it comes before everything else
   run. Never put a script that goes online in `tests/`, and never name one `test_*.py`.
 - A live scraping run needs the owner's approval for that run: no logins, no getting
   around blocks or CAPTCHAs, polite delays.
+- The scraper (`tools/scrape_site.py`) stops at the first block, challenge or bad status and
+  never retries those. Only a connection drop or timeout is retried, once, after a minute; a
+  second failure in a row stops the run (owner, 13 November 2026; checked by
+  `tests/test_scraper_retry.py`). Never add more retries or shorten the wait.
 
 ## GitHub automation
 

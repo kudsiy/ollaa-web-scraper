@@ -120,7 +120,8 @@ ethiopianproperties (~895) add more if USD is acceptable or converted.
 ## Full scrape of the birr sites — progress (owner approved 1 November 2026)
 
 A resumable, capped, polite scraper (`scrape_site.py`): honest UA, random 3–6 s pauses,
-read-only, stops at the first block or error, a daily cap of 500 per site, and a done-log so
+read-only, stops at the first block or error (since 13 November a connection drop or timeout
+is retried once after a minute), a daily cap of 500 per site, and a done-log so
 each run continues where the last stopped. Structured fields only go to a local CSV per site
 (`saved_pages/<site>/full.csv`); no phone numbers, no descriptions, never committed.
 
