@@ -124,19 +124,26 @@ read-only, stops at the first block or error, a daily cap of 500 per site, and a
 each run continues where the last stopped. Structured fields only go to a local CSV per site
 (`saved_pages/<site>/full.csv`); no phone numbers, no descriptions, never committed.
 
-Progress to 2 November 2026 (no blocks):
+Progress to 13 November 2026 (no blocks):
 
 | Site | Done / total | Price | Size | Location | Bedrooms |
 |---|---|---|---|---|---|
-| betdelala | **1,000 / 4,077** | 100% | 99% | 99% (raw text, needs tidying into sub-city codes) | 80% |
-| ethiopiarealty | **510 / 1,594** | 100% | 98% | ~40–58% (rest is in the page text, not the URL) | ~35% |
+| betdelala | **1,248 / 4,201** | 100% | 99% | 99% (raw text, needs tidying into sub-city codes) | 80% |
+| ethiopiarealty | **639 / 1,598** | 100% | 98% | ~40–58% (rest is in the page text, not the URL) | ~35% |
 
-**1,510 listings so far — about 10× the 154 usable adverts in the old Google Sheet.**
+**1,887 listings scraped so far.** The database (`web_listings`) still holds the 2 November
+load (1,332 after duplicates); the 377 rows scraped since then are in the local files and
+are loaded at the next transform + load run.
 
 Notes:
-- The scrape is **not finished**: ~3,077 BetDelala and ~1,084 ethiopiarealty pages remain, to
-  be read over later runs within the daily cap (a few days at 500/site/day; the cap can be
-  raised if the owner wants).
+- The scrape is **not finished**: ~2,953 BetDelala and ~959 ethiopiarealty pages remain (both
+  sitemaps keep growing as new adverts appear), to be read over later runs within the daily
+  cap of 500/site/day.
+- **13 November:** the runs were cut short three times between 21:25 and 21:42, by a
+  connection reset on both sites at the same moment, then a page timeout on each. That points
+  to the laptop's connection that evening, not a block. Every row was saved (the scraper now
+  writes each row at once), so nothing was lost; the runs were left for another day rather
+  than retried in a loop.
 - **ethiopiarealty was timing out** at 3–6 s spacing (the site throttling us). Slowing to
   8–15 s pauses fixed it: 200 read with no error. Its scrape runs gently from now on.
 - **Location still needs normalizing.** BetDelala's location text is messy
