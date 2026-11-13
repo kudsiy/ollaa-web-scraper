@@ -5,6 +5,14 @@ first multi-site scrape (task W16). This is the **web** dataset only; Ollaa-Tele
 its own `DATA_QUALITY.md` for the Telegram data. All counts are read-only and can be
 re-derived from the local load-ready file and the scraper logs.
 
+> **Warning (found 13 November 2026, `THESIS_DATA_CHECK.md`):** every **ethiopiarealty**
+> row has the same wrong price, **3,433 birr**, and the label "rent" (468 rows in
+> `web_listings`, all 657 in the local file, and the first pilot too). The price reader
+> picks up a number shown on every page of that site. Its size, bedrooms and place are fine;
+> its price and sale/rent label must not be used until the reader is fixed (that needs one
+> approved look at a live page). The **423 usable sale listings** below are all BetDelala
+> and are not affected; the "790 usable" total wrongly includes ethiopiarealty rows.
+
 ## Where it comes from
 Two sites whose rules allow it and whose prices are in birr: **BetDelala** and
 **ethiopiarealty** (see `SITE_RECON.md`). The scrape is **not finished** — about 29% of the
