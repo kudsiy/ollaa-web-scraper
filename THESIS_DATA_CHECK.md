@@ -41,9 +41,12 @@ What it means:
   not.** Its rows should not be used for prices until fixed.
 - The **423 usable sale listings** in `DATA_QUALITY.md` are all BetDelala and are
   **not affected**. The "790 usable" total wrongly includes ethiopiarealty rent rows.
-- Fixing it needs one look at a live ethiopiarealty page to find where the real price
-  sits — that is a website visit, so it waits for your approval (not done in this task).
-  The ethiopiarealty pages already fetched would then have to be read again.
+- **Fixed the same evening (owner approved one look at a live page):** the real price sits
+  in the page's "Details" box (e.g. "Price 19,000,000ETB … Property Status For Sale"); the
+  old reader took "10,000ETB"-type numbers from the site's search form. The reader now uses
+  the Details box first and ignores search forms, menus and scripts. The 468 rows in the
+  database are **flagged** `price_unusable = TRUE` (with a note) and stay flagged until
+  those pages are read again with the fixed reader (a re-scrape still needs approval).
 
 ## 1. How many stored listings are off-plan apartments?
 
@@ -199,3 +202,59 @@ web addresses, stored fields and local advert texts; sub-cities came from Ollaa-
 place list (read only). Keyword matching misses some cases and catches a few wrong ones
 (e.g. "Bole Rwanda real estate" is a place, not a developer), so treat the counts as
 approximate. All examples above were checked by eye.
+
+## Update, 13 November 2026 (evening): the scraper now reads the payment terms
+
+Owner's decisions the same evening, now done:
+
+- **ethiopiarealty part of the running scrape stopped** (709 pages read with the old
+  reader). Price reader fixed (see the warning above); the 468 database rows are flagged.
+- **Advert text is now stored, masked.** `parsers/contact_mask.py` replaces every phone
+  number (0911…, +251…, 251…, 9-digit, landline), e-mail, chat link and chat handle with
+  `<contact>` *before* anything is written; prices with thousands commas are never touched.
+  The scraper writes the masked text to `saved_pages/<site>/full_v2.csv`, and the loader
+  masks it again before it goes into the new column `web_listings.ad_text_masked`. The three
+  saved web pages on the laptop were masked too.
+- **New fields** (read by `parsers/offplan_terms.py`, English and Amharic) and matching new
+  columns in `web_listings`: developer, construction status and % built, finish level
+  (semi / full), down payment % and amount, instalment plan, whether payments follow the
+  construction stages, bank loan, handover date, cash / early-payment discount schedule,
+  stated price per m² (and separate semi- and full-finished prices per m²), and a
+  "has payment terms" flag.
+- **Off-plan first:** the scraper now reads adverts whose web address suggests off-plan or
+  a developer first, including ones read earlier without their text.
+- Database backed up first (`backups/ollaa_2026-11-13b.dump`, checked): 1,332 rows before
+  and after; only new columns were added and 468 rows flagged.
+
+### Test on the 62 adverts that have full text: 14 have payment terms
+
+For the owner to check. "–" = not stated / not found. Amharic phrases translated in brackets.
+
+| # | Advert (sub-city) | Developer | Status | Finish | Down payment | Instalments | Tied to stages | Bank loan | Handover | Discount | Price/m² stated |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 6 | Mahder Property, new block, Summit (address says Bole) | Getas Realestate | – (new block; not marked) | – | 10% (= 714,000) | – | – | – | – | – | – |
+| 7 | 2 bed 142 m², Mexico (Kirkos) | – | ready | semi and full offered | 30% | – | – | 50% over 20 years | – | – | semi 155,000 / full 175,000 |
+| 10 | 1 bed 80 m², Kazanchis / Bole Atlas | – | – | – | – | – | – | – | – | mentioned, no figure | 115,000 |
+| 14 | Gibi Gabriel project, Kazanchis (Kirkos) | Ayat Share Company | under construction | – | 15% | mentioned, no details | yes ("rest through progress") | – | – | – | – |
+| 18 | 1 bed 80 m², Bole Atlas (Bole) | – | – | – | – | – | – | – | – | mentioned, no figure | – |
+| 19 | 2 bed 142 m², Mexico (Kirkos) | – | – | fully finished | – | – | – | – | – | **100% → 7%, 75% → 5%, 50% → 3%** | – |
+| 20 | 1 bed, Kazanchis (Kirkos) | – | under construction | – | 15% | – | – | – | 2.5 years | – | – |
+| 21 | 85 m², Yetebaberut, CMC (Yeka) | – | under construction | – | 30% | rest within 1 year 6 months | – | – | 1 year 6 months | – | 89,995 |
+| 30 | 2 bed 139 m², Bole road (Bole) | – | – | – | – | – | – | over 20 years | – | – | – |
+| 34 | 2 bed, CMC Michael (Yeka) | – | under construction | – | 20% | – | – | – | 12 months | – | – |
+| 41 | 2 bed 45 m², Kazanchis (Kirkos) | – | – | – | – | – | – | – | – | mentioned, no figure | – |
+| 46 | 1 bed 23 m², Ayat real estate (Bole) | Ayat Real Estate | – | – | – | – | – | – | – | mentioned, no figure | – |
+| 50 | 2 bed 80 m², Kazanchis (Kirkos) | – | – | – | 15% | – | – | – | – | – | – |
+| 51 | 3 bed 185 m², Ayat 49 (Bole) | – | ready | – | – | – | – | up to 100% | – | – | – |
+
+Things the reader does **not** count as payment terms, on purpose: an estimated monthly rent
+("320,000 birr/month" in an investment note), "cash payment" for a ready flat, and an agent's
+2% commission. 0 of the 62 texts kept a phone number after masking.
+
+**Off-plan apartments in Bole with payment terms, so far: at most 1** — #6, Getas
+Realestate's new block at Summit (10% down payment; its web address says Bole, but the
+advert does not say "under construction", so the reader did not mark it off-plan). The other
+Bole rows are ready flats with a bank-loan option (#30, #51) or only say "discount" without
+a figure (#10, #18, #46). The clear off-plan cases are in Kirkos (Kazanchis) and
+Yeka (CMC). This number should rise once the ~87 unread off-plan/developer BetDelala adverts
+are read with the new reader (waiting for the owner's check of this table).

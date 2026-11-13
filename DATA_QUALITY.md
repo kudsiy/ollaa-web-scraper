@@ -9,9 +9,28 @@ re-derived from the local load-ready file and the scraper logs.
 > row has the same wrong price, **3,433 birr**, and the label "rent" (468 rows in
 > `web_listings`, all 657 in the local file, and the first pilot too). The price reader
 > picks up a number shown on every page of that site. Its size, bedrooms and place are fine;
-> its price and sale/rent label must not be used until the reader is fixed (that needs one
-> approved look at a live page). The **423 usable sale listings** below are all BetDelala
-> and are not affected; the "790 usable" total wrongly includes ethiopiarealty rows.
+> its price and sale/rent label must not be used. The **423 usable sale listings** below are
+> all BetDelala and are not affected; the "790 usable" total wrongly includes ethiopiarealty
+> rows.
+>
+> **Fixed the same evening:** the reader now takes the price from the page's "Details" box
+> (checked on one approved live page: 19,000,000 birr, For Sale) and ignores search forms.
+> The 468 database rows are flagged `price_unusable = TRUE` with a `price_note`, so every
+> query should add `WHERE NOT price_unusable`. They stay flagged until re-scraped with the
+> fixed reader (needs approval); the 709 ethiopiarealty rows in the local `full.csv` are
+> old-reader rows too, and the loader flags them automatically if they are ever loaded.
+
+## New columns (13 November 2026)
+
+`web_listings` now also has: `reader` (which reader version read the page; empty = old
+reader), `price_unusable` / `price_note`, `ad_text_masked` (the advert's text with every
+phone number, e-mail and chat handle replaced by `<contact>`), and the off-plan terms read
+from that text: `developer`, `construction_status`, `construction_progress_pct`,
+`finish_level`, `down_payment_pct`, `down_payment_amount`, `instalment_plan`,
+`stage_linked`, `bank_loan`, `handover`, `discount_schedule`, `stated_price_per_m2`,
+`price_per_m2_semi`, `price_per_m2_full`, `has_payment_terms`. They are empty for the
+1,332 rows loaded before; they fill as pages are read with the new reader. Unmasked phone
+numbers are never stored: the text is masked by the scraper and again by the loader.
 
 ## Where it comes from
 Two sites whose rules allow it and whose prices are in birr: **BetDelala** and

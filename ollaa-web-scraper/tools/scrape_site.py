@@ -4,8 +4,11 @@ sitemap, skip the ones already done, read up to BATCH new ones with a random 3-6
 honest UA, read-only, and STOP at the first block, challenge or error (never bypass). A
 connection drop or timeout is retried once after a minute (owner, 13 Nov 2026); a second
 failure in a row stops the run, and a block, challenge or bad status is never retried.
-Appends structured fields only (no phone numbers, no descriptions) to a local CSV, and
-records done URLs so the next run continues. A daily cap keeps the load light.
+Appends structured fields and the advert's own text, with every phone number, e-mail and
+chat handle masked BEFORE it is written (owner, 13 Nov 2026: never store an unmasked phone
+number), to a local CSV (`full_v2.csv`), and records done URLs so the next run continues.
+Adverts whose web address suggests an off-plan or developer listing are read first,
+including ones read earlier without their text. A daily cap keeps the load light.
 
 usage: scrape_site.py <batch> <label>=<sitemap-url> [...]
 """
@@ -21,12 +24,17 @@ import requests
 from bs4 import BeautifulSoup
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pilot_generic as pg  # noqa: E402
+from parsers.contact_mask import has_contact, mask_contacts  # noqa: E402
+from parsers.offplan_terms import offplan_url_signal  # noqa: E402
 
 DAILY_CAP = 500  # per site per day, polite
 GAP_MIN = float(os.getenv("OLLAA_GAP_MIN", "3"))  # seconds between requests (raise for flaky sites)
 GAP_MAX = float(os.getenv("OLLAA_GAP_MAX", "6"))
-FIELDS = ["source", "url", "price", "currency", "area_sqm", "bedrooms", "place", "listing_type", "scraped_at"]
+FIELDS = ["source", "url", "price", "currency", "area_sqm", "bedrooms", "place", "listing_type", "scraped_at",
+          "ad_text", "reader"]
+READER = "v2-2026-11-13"  # v2: details-box price (ethiopiarealty fix) + masked advert text
 RETRY_WAIT = 60  # seconds before the one retry after a connection drop or timeout
 TRANSIENT = (requests.exceptions.ConnectionError, requests.exceptions.Timeout)
 
@@ -46,6 +54,23 @@ def fetch_with_one_retry(url):
             return None, repr(e)
 
 
+def masked_text(soup):
+    """The advert's text with contacts hidden; refuses to return anything still unmasked."""
+    text = mask_contacts(pg.advert_text(soup))
+    if has_contact(text):  # masking twice must change nothing; if it would, store nothing
+        return ""
+    return text
+
+
+def plan_order(urls, done, have_text, batch, cap_left):
+    """Off-plan / developer adverts without stored text first (even if read before without
+    text), then the adverts never read; at most min(batch, cap_left)."""
+    first = [u for u in urls if offplan_url_signal(u) and u not in have_text]
+    picked = set(first)
+    rest = [u for u in urls if u not in done and u not in picked]
+    return (first + rest)[:min(batch, max(0, cap_left))]
+
+
 def today_count(done_log):
     """How many fetched today already, to respect the daily cap across runs."""
     if not done_log.exists():
@@ -58,7 +83,7 @@ def run(label, sitemap, batch):
     print(f"\n===== {label}")
     out = pg.BASE / label
     out.mkdir(parents=True, exist_ok=True)
-    csv_file, done_log = out / "full.csv", out / "done.log"
+    csv_file, done_log = out / "full_v2.csv", out / "done.log"
     try:
         urls, err = pg.collect_listing_urls(sitemap)
     except Exception as e:  # noqa: BLE001
@@ -74,9 +99,14 @@ def run(label, sitemap, batch):
             parts = ln.split("\t")
             if len(parts) == 2:
                 done.add(parts[1])
+    have_text = set()
+    if csv_file.exists():
+        have_text = {r["url"] for r in csv.DictReader(open(csv_file, encoding="utf-8")) if r.get("reader") == READER}
     cap_left = DAILY_CAP - today_count(done_log)
-    todo = [u for u in urls if u not in done][:min(batch, max(0, cap_left))]
-    print(f"  {len(urls)} in sitemap, {len(done)} already done, daily cap left {cap_left}; this run: {len(todo)}")
+    todo = plan_order(urls, done, have_text, batch, cap_left)
+    n_first = sum(1 for u in todo if offplan_url_signal(u) and u not in have_text)
+    print(f"  {len(urls)} in sitemap, {len(done)} already done, daily cap left {cap_left}; this run: {len(todo)}"
+          f" (off-plan/developer first: {n_first})")
     if not todo:
         print("  nothing to do (done, or daily cap reached)")
         return
@@ -99,8 +129,11 @@ def run(label, sitemap, batch):
             if r.status_code != 200:
                 stopped = f"HTTP {r.status_code} at #{i}"
                 break
-            rec = pg.extract(u, BeautifulSoup(r.content, "lxml"))
+            soup = BeautifulSoup(r.content, "lxml")
+            rec = pg.extract(u, soup)
             rec["source"] = label
+            rec["ad_text"] = masked_text(soup)
+            rec["reader"] = READER
             rec["scraped_at"] = datetime.datetime.now().isoformat(timespec="seconds")
             w.writerow({k: rec.get(k, "") for k in FIELDS})
             fh.flush()  # save every row at once: a run cut off part-way loses nothing
@@ -115,7 +148,7 @@ def run(label, sitemap, batch):
     if n:
         p = lambda k: f"{100*sum(1 for r in rows if str(r[k]).strip())//n}%"
         print(f"    price {p('price')} | size {p('area_sqm')} | location {p('place')} | bedrooms {p('bedrooms')}")
-    total_done = len(done) + n
+    total_done = len(done | {r["url"] for r in rows})
     print(f"  total done for {label}: {total_done} / {len(urls)} ({len(urls)-total_done} left)")
 
 

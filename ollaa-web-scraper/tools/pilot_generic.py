@@ -102,9 +102,70 @@ def num(x):
         return None
 
 
+def detail_pairs(soup):
+    """Label -> value pairs from a property page's 'Details' box (WordPress property themes
+    such as the one ethiopiarealty uses): 'Price' -> '19,000,000ETB', 'Property Size' ->
+    '110 m²', 'Property Status' -> 'For Sale', and the address box's 'Area' -> 'CMC'."""
+    out = {}
+    for box in soup.select("#property-detail-wrap, .property-detail-wrap, #property-address-wrap"):
+        for li in box.select("li"):
+            parts = [p.strip(" :") for p in li.get_text("␞", strip=True).split("␞") if p.strip(" :")]
+            if len(parts) >= 2:
+                out.setdefault(parts[0].lower(), " ".join(parts[1:]))
+    return out
+
+
+def main_text(soup):
+    """The page's visible text without search forms, menus, scripts and styles, so that a
+    price in a search box (e.g. 'Min. Price 10,000ETB') is never read as the listing's price."""
+    s = BeautifulSoup(str(soup), "lxml")
+    for el in s(["script", "style", "noscript", "form", "select", "nav", "header", "footer", "template"]):
+        el.decompose()
+    return s.get_text(" ", strip=True)
+
+
+def advert_text(soup):
+    """The advert's own words (title + description), NOT yet masked: callers must pass it
+    through parsers.contact_mask.mask_contacts before storing it anywhere."""
+    for o in jsonld_objs(soup):
+        if o.get("@type") in ("Product", "Offer", "RealEstateListing", "Residence", "Apartment", "House") \
+                and (o.get("description") or o.get("name")):
+            return f"{o.get('name', '')}\n{o.get('description', '')}".strip()
+    title = soup.find("h1")
+    parts = [title.get_text(" ", strip=True)] if title else []
+    desc = soup.select_one("#property-description-wrap, .property-description-wrap, .property-description")
+    if desc:
+        d = desc.get_text("\n", strip=True)
+        d = re.sub(r"^\s*Description\s*", "", d)
+        if d:
+            parts.append(d)
+    if len(parts) < 2:
+        og = soup.find("meta", attrs={"property": "og:description"}) or soup.find("meta", attrs={"name": "description"})
+        if og and og.get("content"):
+            parts.append(og["content"].strip())
+    return "\n".join(parts).strip()
+
+
+def _money(value):
+    """'19,000,000ETB' -> (19000000.0, 'ETB'); '$1,200/month' -> (1200.0, 'USD')."""
+    m = re.search(r"\d[\d,]*(?:\.\d+)?", value or "")
+    if not m:
+        return None, None
+    cur = "USD" if re.search(r"\$|usd|dollar", value, re.I) else ("ETB" if re.search(r"etb|birr|br\b|ብር", value, re.I) else None)
+    return num(m.group(0)), cur
+
+
 def extract(url, soup):
-    price = currency = size = beds = place = None
-    text = soup.get_text(" ", strip=True)
+    price = currency = size = beds = place = status = None
+    details = detail_pairs(soup)
+    if details:
+        price, currency = _money(details.get("price") or details.get("sale price") or "")
+        size = num(re.sub(r"[^\d.,].*$", "", details.get("property size") or details.get("size") or "").replace(",", "")) or None
+        beds = num(details.get("bedrooms") or details.get("bedroom") or "")
+        place = details.get("area") or details.get("neighborhood") or None
+        st = (details.get("property status") or "").lower()
+        status = "rent" if "rent" in st else ("sale" if "sale" in st else None)
+    text = main_text(soup)
     for o in jsonld_objs(soup):
         off = o.get("offers") if isinstance(o.get("offers"), dict) else {}
         price = price or num(off.get("price")) or num(o.get("price"))
@@ -132,7 +193,7 @@ def extract(url, soup):
         place = re.sub(r"\bethiopia\b", "", str(place), flags=re.I).replace("-", " ").strip()
         if re.fullmatch(r"[\d.\s]*", place):  # a bare number is not a place
             place = ""
-    lt = "rent" if re.search(r"rent|ኪራይ", url, re.I) else ("rent" if (price and 1000 <= price <= 300000) else "sale")
+    lt = status or ("rent" if re.search(r"rent|ኪራይ", url, re.I) else ("rent" if (price and 1000 <= price <= 300000) else "sale"))
     return {"url": url, "price": price or "", "currency": currency or "", "area_sqm": size or "",
             "bedrooms": beds or "", "place": (place or "").strip(), "listing_type": lt}
 

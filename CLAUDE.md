@@ -63,6 +63,12 @@ Ollaa-Telegram scraper depends on it. Protecting it comes before everything else
   never retries those. Only a connection drop or timeout is retried, once, after a minute; a
   second failure in a row stops the run (owner, 13 November 2026; checked by
   `tests/test_scraper_retry.py`). Never add more retries or shorten the wait.
+- Never store an unmasked phone number anywhere (owner, 13 November 2026): advert text is
+  stored only after `parsers/contact_mask.py` has replaced phones, e-mails and chat handles
+  with `<contact>` (the scraper masks it, the loader masks it again; checked by
+  `tests/test_offplan_reading.py`). Saved web pages are masked too.
+- `web_listings` rows with `price_unusable = TRUE` (the 468 ethiopiarealty rows read by the
+  old reader) must never be used for prices until re-scraped with the fixed reader.
 
 ## GitHub automation
 
