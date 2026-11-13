@@ -258,3 +258,111 @@ Bole rows are ready flats with a bank-loan option (#30, #51) or only say "discou
 a figure (#10, #18, #46). The clear off-plan cases are in Kirkos (Kazanchis) and
 Yeka (CMC). This number should rise once the ~87 unread off-plan/developer BetDelala adverts
 are read with the new reader (waiting for the owner's check of this table).
+
+## Owner's corrections and the full scrape (13 November 2026, night)
+
+The owner checked the table above and approved it, with three corrections. All three are done:
+
+1. **#7 and #19 are one property** (Mexico / Senga Tera, 2 bed 142 m², 24.8 million birr).
+   They are now linked (`data/same_property_links.csv`, plus an automatic rule: same
+   sale/rent, price and place, and the same size or bedrooms where both are known), and
+   the database view `web_offplan_properties` shows one row per property with both
+   adverts' terms together: 30% down payment, 50% bank loan over 20 years, semi-finished
+   155,000 / full-finished 175,000 birr per m², and the staged cash discount (100% → 7%,
+   75% → 5%, 50% → 3%).
+   **Is it off-plan? Probably not.** #7 calls it a "ሙሉ በሙሉ የተጠናቀቀ" (completely finished)
+   apartment, its building services are described as working, and the price list matches a
+   finished building (24.8 million ÷ 142 m² ≈ 175,000 = the full-finished price per m²).
+   The semi/full choice is about the *interior finishing*, not the structure. So it is a
+   **developer selling finished units, with a price for paying earlier** — useful for the
+   cash-equivalent price idea, but it should not be counted as off-plan. It is recorded
+   as "ready".
+2. **#6 and #50 are now "probably off-plan"**: a developer-style down payment (or "new
+   block / new project") without the words "under construction" or "ready" gives that
+   status. #50 turned out to be a copy of another Kazanchis advert for the same flat that
+   says "Ready to move in", so that property is recorded as "ready / probably off-plan"
+   (the adverts disagree; both are kept). #6's text places it at **Summit 72**, while its
+   web address says **Bole** — see the sub-city table.
+3. **Sub-city field.** Every listing now has `neighbourhood` (the place name found), a
+   `sub_city` and a `sub_city_unsure` flag. The sub-city comes from
+   `ollaa-web-scraper/data/neighbourhood_subcity.csv`; **the owner's column
+   `owner_sub_city` in that file always wins** — fill it in (or send the corrections) and
+   the next preparation/load uses it. The table lists every neighbourhood named in the
+   off-plan and developer adverts so far (scraped ones, plus BetDelala addresses not yet
+   read):
+
+| Neighbourhood | Sub-city used now | Unsure? | Why | Off-plan / developer adverts |
+|---|---|---|---|---|
+| Ayat | Bole | unsure | Ayat spreads over Bole, Yeka and (since 2020) Lemi Kura | 30 |
+| Kazanchis | Kirkos | | | 28 |
+| Bole Bulbula | Bole | unsure | edge of Bole (Akaki-Kality border) | 23 |
+| Sarbet / Old Airport | Nifas Silk | unsure | Nifas Silk-Lafto or Kolfe | 16 |
+| Bole | Bole | unsure | "Bole" alone may mean the Bole road / airport area | 14 |
+| Kirkos | Kirkos | | | 12 |
+| CMC | Yeka | unsure | usually Yeka, some CMC-area sites on the Bole side | 11 |
+| Bulgaria | (none) | unsure | Kirkos or Nifas Silk | 9 |
+| Lebu | Kolfe | unsure | may be Nifas Silk-Lafto | 7 |
+| Piassa | Arada | | | 6 |
+| Gelan | Sheger | unsure | run by Addis but in Oromia | 5 |
+| Gotera | Nifas Silk | | | 4 |
+| Yeka | Yeka | | | 3 |
+| Summit | (none) | unsure | Bole or Yeka | 3 |
+| Megenagna | Yeka | unsure | Yeka / Bole / Kirkos border | 3 |
+| Wello Sefer | Bole | unsure | Kirkos or Bole | 3 |
+| Wesen | (none) | unsure | not in the place list | 3 |
+| Jemo | Kolfe | unsure | may be Nifas Silk-Lafto | 3 |
+| Ayat 49 | Bole | unsure | Bole, Yeka or Lemi Kura by site | 3 |
+| Alem Bank | (none) | unsure | not in the place list | 3 |
+| Lemi Kura | Lemi Kura | | | 2 |
+| Summit 72 | (none) | unsure | Bole or Yeka | 2 |
+| Lafto | Nifas Silk | | | 2 |
+| Bole Rwanda | Bole | | | 2 |
+| Meskel Flower | Kirkos | unsure | Kirkos / Bole border | 2 |
+| Gerji | Yeka | unsure | the place list says Yeka; much of Gerji may be Bole | 2 |
+| Garment, Signal | (none) | unsure | not in the place list | 2 each |
+| Imperial | Yeka | unsure | Bole / Yeka border | 1 |
+| Mexico | Kirkos | unsure | Kirkos / Lideta border | 1 |
+| Figa | (none) | unsure | Bole or Yeka | 1 |
+| Urael | Bole | unsure | Bole / Kirkos border | 1 |
+| Atlas | Bole | | | 1 |
+| Stadium, Arada | Arada | | | 1 each |
+| Sidist Kilo | Gulele | | | 1 |
+| Ayer Tena | Kolfe | | | 1 |
+| Kality | Akaki | | | 1 |
+| Shola | Yeka | | | 1 |
+| Enkulal Fabrica, Haile Garment, Addisu Gebeya | (none) | unsure | not in the place list | 1 each |
+
+The "unsure" notes are Claude's starting points only; the owner (land administration)
+decides. The file is refreshed after each preparation run, keeping the owner's columns.
+
+### Off-plan apartments WITH payment terms, by sub-city — so far
+
+From the 61 adverts whose text is stored (database view `web_offplan_properties`, one row
+per property):
+
+| Sub-city (current mapping) | Off-plan properties with payment terms | Note |
+|---|---|---|
+| Kirkos | 3 | all Kazanchis (one is "ready / probably off-plan": its adverts disagree) |
+| Yeka | 2 | both CMC — unsure, CMC sits near the Bole border |
+| Bole | 1 | #6 Getas Realestate, 10% down payment — unsure: its text says Summit 72 |
+| **Total** | **6** | |
+
+These are **interim** numbers: the full scrape below has just started.
+
+### The full scrape (step 3) — running
+
+- Started 13 Nov 22:46 as its own Windows process (`tools/run_until_done.py --live`, log
+  `saved_pages/run_until_done_2026-11-13.log`). Usual polite limits: honest user agent,
+  3–6 s pauses (ethiopiarealty 8–15 s), at most 500 pages per site per day, and a **full
+  stop at the first block, challenge, bad status or second connection failure** (the
+  one-retry rule).
+- Order: BetDelala **off-plan and developer adverts first** (including those read earlier
+  without their text), then the rest of BetDelala, then **ethiopiarealty re-read** with
+  the fixed price reader (owner approved).
+- BetDelala's 500 pages for 13 Nov were already used, so it starts at 00:10 on 14 Nov.
+  About 2,650 BetDelala pages plus ~1,600 ethiopiarealty pages remain: **about 9 days** at
+  500 pages a day. If the laptop is switched off, the run stops and must be started again
+  (it continues where it left off).
+- The scrape only writes local files. Loading into the database is a separate step
+  (`etl/prepare_web_listings.py`, then a backup, then `etl/load_web_listings.py --apply`),
+  done by Claude when the owner asks, never between 10:00 and 12:00.

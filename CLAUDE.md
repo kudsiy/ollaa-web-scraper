@@ -67,8 +67,20 @@ Ollaa-Telegram scraper depends on it. Protecting it comes before everything else
   stored only after `parsers/contact_mask.py` has replaced phones, e-mails and chat handles
   with `<contact>` (the scraper masks it, the loader masks it again; checked by
   `tests/test_offplan_reading.py`). Saved web pages are masked too.
-- `web_listings` rows with `price_unusable = TRUE` (the 468 ethiopiarealty rows read by the
-  old reader) must never be used for prices until re-scraped with the fixed reader.
+- `web_listings` rows with `price_unusable = TRUE` (ethiopiarealty rows read by the old
+  reader) must never be used for prices until re-scraped with the fixed reader; rows with
+  `exact_repeat = TRUE` are repeat copies. Price queries add
+  `WHERE NOT price_unusable AND NOT exact_repeat`.
+- Sub-cities come from `ollaa-web-scraper/data/neighbourhood_subcity.csv`; the owner's
+  column `owner_sub_city` always wins (owner works in land administration; the thesis uses
+  the official Bole Sub-City boundary). Never overwrite the owner's columns.
+- The sister project's place list is read (never changed) from the folder in `.env`
+  `SISTER_PLACES_DIR`; never write that project's name into a `.py` file (the no-Telegram
+  guard test would rightly fail).
+- The multi-day scrape is `tools/run_until_done.py --live` (owner approved, 13 Nov 2026):
+  BetDelala off-plan/developer adverts first, then the rest, then the ethiopiarealty
+  re-read; 500 pages/site/day; stops for good at the first block or error. Loading is a
+  separate step: `etl/prepare_web_listings.py`, backup, `etl/load_web_listings.py --apply`.
 
 ## GitHub automation
 

@@ -86,6 +86,21 @@ python -m etl.unified_exporter                      every website once, to JSON,
 `python scheduler.py --help` lists the options; `--diagnostic` runs without the database.
 The website names are the keys in `source_registry.py`.
 
+## The thesis data (BetDelala and ethiopiarealty, task W16/W17)
+
+From the `ollaa-web-scraper` folder (see `THESIS_DATA_CHECK.md` and `DATA_QUALITY.md`):
+
+```
+python tools/run_until_done.py --live          polite multi-day scrape (owner-approved runs only)
+python etl/prepare_web_listings.py             offline: build the load-ready file and the sub-city table
+python etl/load_web_listings.py --apply        into web_listings (after a backup; never 10:00-12:00)
+```
+
+The scrape stores each advert's text with phone numbers hidden and reads the off-plan
+payment terms from it. `etl/prepare_web_listings.py` needs `SISTER_PLACES_DIR` in `.env`
+(the sister project's place list, read only). Sub-cities follow
+`ollaa-web-scraper/data/neighbourhood_subcity.csv`; the owner's column there always wins.
+
 ## Never
 
 - Add Telegram in any form (sources, `t.me` pages, logins). A test fails if it comes back.

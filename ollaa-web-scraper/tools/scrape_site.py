@@ -62,12 +62,14 @@ def masked_text(soup):
     return text
 
 
-def plan_order(urls, done, have_text, batch, cap_left):
+def plan_order(urls, done, have_text, batch, cap_left, reread_old=False):
     """Off-plan / developer adverts without stored text first (even if read before without
-    text), then the adverts never read; at most min(batch, cap_left)."""
+    text), then the adverts never read; at most min(batch, cap_left). With reread_old (the
+    ethiopiarealty re-scrape, owner 13 Nov 2026) every advert not yet read by the new reader
+    counts as not read."""
     first = [u for u in urls if offplan_url_signal(u) and u not in have_text]
     picked = set(first)
-    rest = [u for u in urls if u not in done and u not in picked]
+    rest = [u for u in urls if (u not in have_text if reread_old else u not in done) and u not in picked]
     return (first + rest)[:min(batch, max(0, cap_left))]
 
 
@@ -79,8 +81,11 @@ def today_count(done_log):
     return sum(1 for ln in done_log.read_text(encoding="utf-8").splitlines() if ln.startswith(today + "\t"))
 
 
-def run(label, sitemap, batch):
-    print(f"\n===== {label}")
+def run(label, sitemap, batch, reread_old=False):
+    """One capped batch for one site. Returns "finished", "cap" (daily cap reached, more to
+    do tomorrow) or "stopped: <reason>" (a block, challenge, bad status or second
+    connection failure: the caller must not continue)."""
+    print(f"\n===== {label}" + (" (re-reading old pages with the new reader)" if reread_old else ""))
     out = pg.BASE / label
     out.mkdir(parents=True, exist_ok=True)
     csv_file, done_log = out / "full_v2.csv", out / "done.log"
@@ -88,10 +93,10 @@ def run(label, sitemap, batch):
         urls, err = pg.collect_listing_urls(sitemap)
     except Exception as e:  # noqa: BLE001
         print(f"  could not read sitemap: {e!r}")
-        return
+        return f"stopped: could not read sitemap ({e!r})"
     if err or not urls:
-        print(f"  {err or 'no listing URLs'} — skipping")
-        return
+        print(f"  {err or 'no listing URLs'} — stopping")
+        return f"stopped: {err or 'no listing URLs'}"
 
     done = set()
     if done_log.exists():
@@ -103,13 +108,14 @@ def run(label, sitemap, batch):
     if csv_file.exists():
         have_text = {r["url"] for r in csv.DictReader(open(csv_file, encoding="utf-8")) if r.get("reader") == READER}
     cap_left = DAILY_CAP - today_count(done_log)
-    todo = plan_order(urls, done, have_text, batch, cap_left)
+    todo = plan_order(urls, done, have_text, batch, cap_left, reread_old)
     n_first = sum(1 for u in todo if offplan_url_signal(u) and u not in have_text)
     print(f"  {len(urls)} in sitemap, {len(done)} already done, daily cap left {cap_left}; this run: {len(todo)}"
           f" (off-plan/developer first: {n_first})")
     if not todo:
-        print("  nothing to do (done, or daily cap reached)")
-        return
+        left = plan_order(urls, done, have_text, 10**9, 10**9, reread_old)
+        print("  nothing to do " + ("(daily cap reached)" if left else "(finished)"))
+        return "cap" if left else "finished"
 
     new_file = not csv_file.exists()
     rows, stopped = [], None
@@ -148,12 +154,16 @@ def run(label, sitemap, batch):
     if n:
         p = lambda k: f"{100*sum(1 for r in rows if str(r[k]).strip())//n}%"
         print(f"    price {p('price')} | size {p('area_sqm')} | location {p('place')} | bedrooms {p('bedrooms')}")
-    total_done = len(done | {r["url"] for r in rows})
-    print(f"  total done for {label}: {total_done} / {len(urls)} ({len(urls)-total_done} left)")
+    read_now = {r["url"] for r in rows}
+    left = plan_order(urls, done | read_now, have_text | read_now, 10**9, 10**9, reread_old)
+    print(f"  total done for {label}: {len(done | read_now)} / {len(urls)}; still to read: {len(left)}")
+    if stopped:
+        return f"stopped: {stopped}"
+    return "cap" if left else "finished"
 
 
 if __name__ == "__main__":
     batch = int(sys.argv[1])
     for arg in sys.argv[2:]:
         label, _, sm = arg.partition("=")
-        run(label, sm, batch)
+        run(label, sm, batch, reread_old=os.getenv("OLLAA_REREAD_OLD") == "1")

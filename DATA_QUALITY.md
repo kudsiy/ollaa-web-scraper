@@ -32,6 +32,31 @@ from that text: `developer`, `construction_status`, `construction_progress_pct`,
 1,332 rows loaded before; they fill as pages are read with the new reader. Unmasked phone
 numbers are never stored: the text is masked by the scraper and again by the loader.
 
+Later the same night (owner's corrections): `neighbourhood`, `sub_city_unsure` (sub-city
+taken from `data/neighbourhood_subcity.csv`, where the owner's column wins),
+`property_group` (adverts of the same property share it) and `exact_repeat` (an older row
+that turned out to be a repeat copy of a fuller advert: flagged, never deleted). The view
+`web_offplan_properties` gives one row per property with all its adverts' terms together.
+
+## State on 13 November 2026, 22:46 (after the second load)
+
+Backup first (`backups/ollaa_2026-11-13c.dump`, checked). `web_listings`: **1,332 rows
+before, 2,048 after** (716 new rows from the BetDelala and ethiopiarealty pages scraped
+since 2 Nov; the rest updated; nothing deleted).
+
+| | Rows |
+|---|---|
+| In the table | 2,048 |
+| Flagged `exact_repeat` (older repeat copies) | 117 |
+| Flagged `price_unusable` (all ethiopiarealty rows read by the old reader) | 709 |
+| BetDelala sale / rent (not repeats) | 944 / 278 |
+| With masked advert text | 61 (the local adverts; the scrape adds more) |
+| Texts still holding a phone-like number | 0 |
+
+**Every price query should add** `WHERE NOT price_unusable AND NOT exact_repeat`.
+The sub-city of a row may change when the owner corrects the neighbourhood table; that is
+expected (the next load applies it).
+
 ## Where it comes from
 Two sites whose rules allow it and whose prices are in birr: **BetDelala** and
 **ethiopiarealty** (see `SITE_RECON.md`). The scrape is **not finished** — about 29% of the

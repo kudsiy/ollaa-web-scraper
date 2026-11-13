@@ -58,6 +58,7 @@ OFFPLAN = re.compile(
 READY = re.compile(r"ready\s+to\s+move|move[\s-]?in\s+ready|ready\s+for\s+(?:living|occupancy)|title\s+deed|"
                    r"fully\s+(?:built|completed)|ካርታ\s*(?:ያለው|ያላቸ\w*|አለው|ተዘጋጅቷል)|ለመኖሪያ\s*ዝግጁ|ለኑሮ\s*ዝግጁ|ሰው\s*መኖር\s*የጀመረ|"
                    r"ተጠናቅቆ\s*ያለቀ|ሙሉ\s*በሙሉ\s*የተጠናቀቀ|100\s?%\s*ተገንብቶ\s*ያለቀ|ወዲያውኑ\s*የሚረከቡ", I)
+NEW_PROJECT = re.compile(r"new\s+(?:block|project|building\s+for\s+sale)|አዲስ\s*(?:ብሎክ|ፕሮጀክት|ሳይት)", I)
 PROGRESS = re.compile(r"(\d{1,3})\s?%\s*(?:constructed|completed|complete|built|done|finished|of\s+(?:the\s+)?construction)|"
                       r"(?:construction|ግንባታ\w*)\D{0,20}?(\d{1,3})\s?%", I)
 SEMI = re.compile(r"semi[\s-]?finish\w*|ሴሚ\s*ፊኒሺ\w*|ከፊል\s*ያለቀ", I)
@@ -228,8 +229,45 @@ def extract_terms(text, url=""):
     if out["stated_price_per_m2"] is None:
         out["stated_price_per_m2"] = out["price_per_m2_full"] or out["price_per_m2_semi"]
 
+    # Owner, 13 Nov 2026: a developer-style down payment (or a "new block / new project")
+    # without the words "under construction" or "ready" is "probably off-plan".
+    if not out["construction_status"] and (out["down_payment_pct"] or out["instalment_plan"] or NEW_PROJECT.search(t)):
+        out["construction_status"] = "probably off-plan"
+
     out["has_payment_terms"] = bool(out["down_payment_pct"] or out["instalment_plan"] or out["stage_linked"]
                                     or out["bank_loan"] or out["discount_schedule"])
+    return out
+
+
+OFFPLAN_STATUSES = ("under construction", "probably off-plan")
+TEXT_JOIN = "\n---\n"  # separates the texts of several adverts of the same property
+
+
+def is_offplan(terms):
+    status = (terms or {}).get("construction_status") or ""
+    return any(s in status for s in OFFPLAN_STATUSES)
+
+
+def terms_for(text, url=""):
+    """Terms for one advert text, or for several adverts of the same property joined by
+    TEXT_JOIN: each advert is read on its own, then the results are put together. When the
+    adverts disagree (e.g. one says ready, another offers a down payment) both are kept,
+    as in "ready / probably off-plan"."""
+    parts = [p for p in (text or "").split(TEXT_JOIN) if p.strip()]
+    if len(parts) <= 1:
+        return extract_terms(text, url)
+    each = [extract_terms(p, url) for p in parts]
+    out = {}
+    for k in each[0]:
+        vals = [e[k] for e in each if e[k] not in (None, "")]
+        if k == "has_payment_terms" or k == "stage_linked":
+            out[k] = any(vals) if vals else (False if k == "has_payment_terms" else None)
+        elif not vals:
+            out[k] = None
+        elif isinstance(vals[0], (int, float)) and not isinstance(vals[0], bool):
+            out[k] = vals[0]
+        else:
+            out[k] = " / ".join(dict.fromkeys(str(v) for v in vals))
     return out
 
 

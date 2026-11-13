@@ -26,7 +26,7 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 from etl.db_writer import DBWriter  # reuses the everyday-login / no-postgres guard  # noqa: E402
 from parsers.contact_mask import has_contact, mask_contacts  # noqa: E402
-from parsers.offplan_terms import extract_terms  # noqa: E402
+from parsers.offplan_terms import terms_for  # noqa: E402
 
 DEFAULT_CSV = pathlib.Path(__file__).resolve().parent.parent / "saved_pages" / "_load" / "web_listings_loadready.csv"
 TABLE = "web_listings"
@@ -58,10 +58,10 @@ NEW_COLUMNS = [
     ("price_unusable", "BOOLEAN DEFAULT FALSE"),
     ("price_note", "TEXT"),
     ("ad_text_masked", "TEXT"),
-    ("developer", "VARCHAR(120)"),
-    ("construction_status", "VARCHAR(32)"),
+    ("developer", "VARCHAR(200)"),
+    ("construction_status", "VARCHAR(80)"),
     ("construction_progress_pct", "NUMERIC(5,1)"),
-    ("finish_level", "VARCHAR(40)"),
+    ("finish_level", "VARCHAR(80)"),
     ("down_payment_pct", "NUMERIC(5,1)"),
     ("down_payment_amount", "NUMERIC(15,2)"),
     ("instalment_plan", "TEXT"),
@@ -73,13 +73,18 @@ NEW_COLUMNS = [
     ("price_per_m2_semi", "NUMERIC(12,2)"),
     ("price_per_m2_full", "NUMERIC(12,2)"),
     ("has_payment_terms", "BOOLEAN"),
+    ("neighbourhood", "VARCHAR(80)"),
+    ("sub_city_unsure", "BOOLEAN"),
+    ("property_group", "VARCHAR(16)"),
+    ("exact_repeat", "BOOLEAN DEFAULT FALSE"),
 ]
 TERM_COLS = ["developer", "construction_status", "construction_progress_pct", "finish_level", "down_payment_pct",
              "down_payment_amount", "instalment_plan", "stage_linked", "bank_loan", "handover", "discount_schedule",
              "stated_price_per_m2", "price_per_m2_semi", "price_per_m2_full", "has_payment_terms"]
 BASE_COLS = ["source", "source_url", "price", "currency", "listing_type", "property_type", "area_sqm",
-             "bedrooms", "location_code", "sub_city", "city", "latitude", "longitude", "probable_dup",
-             "content_hash", "scraped_at"]
+             "bedrooms", "location_code", "neighbourhood", "sub_city", "sub_city_unsure", "city", "latitude",
+             "longitude", "probable_dup", "property_group", "content_hash", "scraped_at"]
+YES_NO = ("probable_dup", "sub_city_unsure")
 COLS = BASE_COLS + ["reader", "ad_text_masked"] + TERM_COLS
 OLD_READER_NOTE = ("price taken from the site's search form by the old reader (bug found 13 Nov 2026); "
                    "do not use until re-scraped with the fixed reader")
@@ -90,12 +95,82 @@ MARK_OLD_ETHIOPIAREALTY = (f"UPDATE {TABLE} SET price_unusable = TRUE, price_not
 def row_values(r):
     """One CSV row -> a tuple in COLS order. The advert text is masked again here, and a row
     whose text would still hold a contact is stored without text."""
-    base = [(r.get(c) or None) if c != "probable_dup" else (r.get(c) == "yes") for c in BASE_COLS]
+    base = [(r.get(c) or None) if c not in YES_NO else (r.get(c) == "yes") for c in BASE_COLS]
     text = mask_contacts(r.get("ad_text") or r.get("ad_text_masked") or "")
     if has_contact(text):
         text = ""
-    terms = extract_terms(text, r.get("source_url") or "") if text else {}
+    terms = terms_for(text, r.get("source_url") or "") if text else {}
     return tuple(base + [r.get("reader") or None, text or None] + [terms.get(c) for c in TERM_COLS])
+
+
+# Re-loading a web address already in the table updates it instead of skipping it:
+# - place, sub-city, neighbourhood and same-property group always follow the latest mapping
+#   (so the owner's sub-city corrections reach the table);
+# - advert text and terms are replaced only when the new row has text;
+# - price, size and the rest only when the new row was read by the new reader, which also
+#   clears the "price unusable" flag. Nothing is ever deleted.
+_ALWAYS = ["property_type", "location_code", "neighbourhood", "sub_city", "sub_city_unsure", "city", "latitude",
+           "longitude", "probable_dup", "property_group"]
+_IF_READER = ["price", "currency", "listing_type", "area_sqm", "bedrooms", "scraped_at", "reader"]
+UPSERT = (
+    f"INSERT INTO {TABLE} ({','.join(COLS)}) VALUES %s ON CONFLICT (content_hash) DO UPDATE SET "
+    + ", ".join(f"{c} = EXCLUDED.{c}" for c in _ALWAYS) + ", "
+    + "ad_text_masked = COALESCE(EXCLUDED.ad_text_masked, {t}.ad_text_masked), ".format(t=TABLE)
+    + ", ".join(f"{c} = CASE WHEN EXCLUDED.ad_text_masked IS NOT NULL THEN EXCLUDED.{c} ELSE {TABLE}.{c} END"
+                for c in TERM_COLS) + ", "
+    + ", ".join(f"{c} = CASE WHEN EXCLUDED.reader IS NOT NULL THEN EXCLUDED.{c} ELSE {TABLE}.{c} END"
+                for c in _IF_READER) + ", "
+    + f"price_unusable = CASE WHEN EXCLUDED.reader IS NOT NULL THEN FALSE ELSE {TABLE}.price_unusable END, "
+    + f"price_note = CASE WHEN EXCLUDED.reader IS NOT NULL THEN NULL ELSE {TABLE}.price_note END"
+)
+# One row per property for the thesis: adverts of the same property (property_group) read
+# together. Prices from rows flagged price_unusable are left out.
+VIEW = f"""
+CREATE OR REPLACE VIEW web_offplan_properties AS
+SELECT property_group,
+       COUNT(*)                                                   AS adverts,
+       string_agg(DISTINCT source_url, ' | ')                     AS web_addresses,
+       string_agg(DISTINCT sub_city, ' / ')                       AS sub_city,
+       bool_or(sub_city_unsure)                                   AS sub_city_unsure,
+       string_agg(DISTINCT neighbourhood, ' / ')                  AS neighbourhood,
+       string_agg(DISTINCT developer, ' / ')                      AS developer,
+       string_agg(DISTINCT construction_status, ' / ')            AS construction_status,
+       bool_or(construction_status LIKE '%under construction%' OR construction_status LIKE '%probably off-plan%') AS offplan,
+       string_agg(DISTINCT finish_level, ' / ')                   AS finish_level,
+       MAX(price) FILTER (WHERE NOT COALESCE(price_unusable, FALSE)) AS price,
+       MAX(area_sqm)                                              AS area_sqm,
+       MAX(bedrooms)                                              AS bedrooms,
+       MAX(down_payment_pct)                                      AS down_payment_pct,
+       string_agg(DISTINCT instalment_plan, ' / ')                AS instalment_plan,
+       bool_or(stage_linked)                                      AS stage_linked,
+       string_agg(DISTINCT bank_loan, ' / ')                      AS bank_loan,
+       string_agg(DISTINCT handover, ' / ')                       AS handover,
+       string_agg(DISTINCT discount_schedule, ' / ')              AS discount_schedule,
+       MAX(stated_price_per_m2)                                   AS stated_price_per_m2,
+       MAX(price_per_m2_semi)                                     AS price_per_m2_semi,
+       MAX(price_per_m2_full)                                     AS price_per_m2_full,
+       bool_or(has_payment_terms)                                 AS has_payment_terms
+FROM {TABLE}
+WHERE ad_text_masked IS NOT NULL AND property_group IS NOT NULL AND NOT COALESCE(exact_repeat, FALSE)
+GROUP BY property_group;
+"""
+
+
+# A row already in the table that the preparation step now treats as a repeat copy of a
+# fuller advert (same site, type, place, price and size) is flagged, never deleted.
+MARK_REPEAT = (f"UPDATE {TABLE} SET exact_repeat = TRUE, property_group = %s "
+               f"WHERE content_hash = %s AND exact_repeat IS NOT TRUE")
+REPEATS_CSV = DEFAULT_CSV.parent / "web_listings_repeats.csv"
+
+
+def mark_repeats(cur, path=REPEATS_CSV):
+    if not pathlib.Path(path).exists():
+        return 0
+    n = 0
+    for r in csv.DictReader(open(path, encoding="utf-8")):
+        cur.execute(MARK_REPEAT, (r["kept_property_group"], r["content_hash"]))
+        n += cur.rowcount
+    return n
 
 
 def read_csv(path):
@@ -107,7 +182,9 @@ def upgrade(cur):
     for name, kind in NEW_COLUMNS:
         cur.execute(f"ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS {name} {kind}")
     cur.execute(MARK_OLD_ETHIOPIAREALTY, (OLD_READER_NOTE,))
-    return cur.rowcount
+    marked = cur.rowcount
+    cur.execute(VIEW)
+    return marked
 
 
 def main():
@@ -141,7 +218,7 @@ def main():
     if not args.apply:
         print("VALIDATE only — no database touched. Table it would create:")
         print(DDL)
-        print(f"Would insert {len(rows)} rows into '{TABLE}' (ON CONFLICT (content_hash) DO NOTHING).")
+        print(f"Would insert or update {len(rows)} rows in '{TABLE}' (matched by content_hash; nothing deleted).")
         print("Re-run with --apply, after a backup and the owner's approval, to load.")
         return 0
 
@@ -156,15 +233,15 @@ def main():
                 cur.execute(f"ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS {name} {kind}")
             cur.execute(f"SELECT COUNT(*) FROM {TABLE}")
             before = cur.fetchone()[0]
-            execute_values(cur,
-                           f"INSERT INTO {TABLE} ({','.join(COLS)}) VALUES %s "
-                           f"ON CONFLICT (content_hash) DO NOTHING", rows)
+            execute_values(cur, UPSERT, rows, page_size=500)
             cur.execute(MARK_OLD_ETHIOPIAREALTY, (OLD_READER_NOTE,))
             marked = cur.rowcount
+            repeats = mark_repeats(cur)
+            cur.execute(VIEW)
             cur.execute(f"SELECT COUNT(*) FROM {TABLE}")
             after = cur.fetchone()[0]
-        print(f"loaded into {TABLE}: {before} rows before, {after} after (+{after - before} new); "
-              f"old-reader ethiopiarealty prices flagged: {marked}.")
+        print(f"loaded into {TABLE}: {before} rows before, {after} after (+{after - before} new, the rest updated); "
+              f"old-reader ethiopiarealty prices flagged: {marked}; older rows flagged as repeat copies: {repeats}.")
     finally:
         conn.close()
     return 0
