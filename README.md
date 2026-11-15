@@ -92,6 +92,7 @@ From the `ollaa-web-scraper` folder (see `THESIS_DATA_CHECK.md` and `DATA_QUALIT
 
 ```
 python tools/run_until_done.py --live          polite multi-day scrape (owner-approved runs only)
+powershell -File tools/start_scrape.ps1        start it if not running and not stopped (used at log-in)
 python etl/prepare_web_listings.py             offline: build the load-ready file and the sub-city table
 python etl/load_web_listings.py --apply        into web_listings (after a backup; never 10:00-12:00)
 ```

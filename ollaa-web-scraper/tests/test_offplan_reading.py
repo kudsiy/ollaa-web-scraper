@@ -221,3 +221,24 @@ def test_runner_refuses_without_live(monkeypatch):
     from tools import run_until_done
     monkeypatch.setattr(run_until_done.sys, "argv", ["run_until_done.py"])
     assert run_until_done.main() == 2
+
+
+def test_runner_stop_is_final(monkeypatch, tmp_path):
+    from tools import run_until_done as R
+    monkeypatch.setattr(R, "STOP_FILE", tmp_path / "SCRAPE_STOPPED.txt")
+    monkeypatch.setattr(R, "DONE_FILE", tmp_path / "SCRAPE_FINISHED.txt")
+    monkeypatch.setattr(R.sys, "argv", ["run_until_done.py", "--live"])
+    calls = []
+    monkeypatch.setattr(R.scrape_site, "run", lambda *a, **k: calls.append(a) or "stopped: HTTP 403 at #1")
+    assert R.main() == 1 and R.STOP_FILE.exists() and len(calls) == 1
+    # the at-logon restart must not try again while the stop file is there
+    assert R.main() == 3 and len(calls) == 1
+
+
+def test_runner_marks_finished(monkeypatch, tmp_path):
+    from tools import run_until_done as R
+    monkeypatch.setattr(R, "STOP_FILE", tmp_path / "SCRAPE_STOPPED.txt")
+    monkeypatch.setattr(R, "DONE_FILE", tmp_path / "SCRAPE_FINISHED.txt")
+    monkeypatch.setattr(R.sys, "argv", ["run_until_done.py", "--live"])
+    monkeypatch.setattr(R.scrape_site, "run", lambda *a, **k: "finished")
+    assert R.main() == 0 and R.DONE_FILE.exists() and R.main() == 3

@@ -81,6 +81,12 @@ Ollaa-Telegram scraper depends on it. Protecting it comes before everything else
   BetDelala off-plan/developer adverts first, then the rest, then the ethiopiarealty
   re-read; 500 pages/site/day; stops for good at the first block or error. Loading is a
   separate step: `etl/prepare_web_listings.py`, backup, `etl/load_web_listings.py --apply`.
+- The Windows task `OllaaWebScrape` (owner approved, 15 Nov 2026) runs
+  `tools/start_scrape.ps1` at each log-in: it starts the runner only if it is not running
+  and has not stopped. A stop is final: the runner writes `saved_pages/SCRAPE_STOPPED.txt`
+  (or `SCRAPE_FINISHED.txt`) and nothing restarts while it exists. Remove that file only on
+  the owner's word, after checking why it stopped. Remove the task
+  (`Unregister-ScheduledTask OllaaWebScrape`) when the scrape is finished or the owner asks.
 
 ## GitHub automation
 

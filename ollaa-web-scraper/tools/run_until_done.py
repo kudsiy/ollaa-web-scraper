@@ -9,7 +9,12 @@ re-read with the fixed price reader (8-15 s pauses). When the daily cap is reach
 until shortly after midnight and continues. It only writes local files; loading into the
 database is a separate, checked step (etl/prepare_web_listings.py, etl/load_web_listings.py).
 
-usage: python tools/run_until_done.py      (from ollaa-web-scraper; refuses without --live)
+A stop is final: the runner writes saved_pages/SCRAPE_STOPPED.txt (and SCRAPE_FINISHED.txt
+when all is done) and refuses to start while either file exists, so the at-logon restart
+(tools/start_scrape.ps1, owner approved 15 Nov 2026) can never retry after a block. Only the
+owner (or Claude, on the owner's word after checking the reason) removes the file.
+
+usage: python tools/run_until_done.py --live      (from ollaa-web-scraper)
 """
 import datetime
 import os
@@ -18,6 +23,9 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import scrape_site  # noqa: E402
+
+STOP_FILE = scrape_site.pg.BASE / "SCRAPE_STOPPED.txt"
+DONE_FILE = scrape_site.pg.BASE / "SCRAPE_FINISHED.txt"
 
 PLAN = [
     # label, sitemap, gap min, gap max, re-read pages read by the old reader
@@ -38,6 +46,10 @@ def main():
     if "--live" not in sys.argv:
         print("This visits live websites. Run it only with the owner's approval, adding --live.")
         return 2
+    for marker in (STOP_FILE, DONE_FILE):
+        if marker.exists():
+            print(f"Not starting: {marker.name} exists ({marker.read_text(encoding='utf-8').strip()[:200]}).")
+            return 3
     for label, sitemap, gmin, gmax, reread in PLAN:
         scrape_site.GAP_MIN, scrape_site.GAP_MAX = gmin, gmax
         while True:
@@ -47,9 +59,11 @@ def main():
                 break
             if status.startswith("stopped"):
                 print("STOPPED for good — not continuing with any site. Owner to decide.", flush=True)
+                STOP_FILE.write_text(f"{datetime.datetime.now():%Y-%m-%d %H:%M} {label}: {status}\n", encoding="utf-8")
                 return 1
             wait_until_tomorrow()
     print(f"[{datetime.datetime.now():%Y-%m-%d %H:%M}] ALL FINISHED", flush=True)
+    DONE_FILE.write_text(f"{datetime.datetime.now():%Y-%m-%d %H:%M} all sites finished\n", encoding="utf-8")
     return 0
 
 

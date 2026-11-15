@@ -351,7 +351,13 @@ These are **interim** numbers: the full scrape below has just started.
 
 ### The full scrape (step 3) — running
 
-- Started 13 Nov 22:46 as its own Windows process (`tools/run_until_done.py --live`, log
+- **Restarted 15 Nov 22:04** (the 13 Nov start had stopped, unnoticed, before midnight —
+  probably when the app or laptop closed — so no pages were read on 14 Nov). It now runs
+  independently of the app, and the Windows task `OllaaWebScrape` (owner approved) restarts
+  it at each log-in unless it has stopped for good. Log:
+  `saved_pages/run_until_done_2026-11-15.log`. First 11 pages: price, masked text and terms
+  all read; no phone numbers left.
+- First started 13 Nov 22:46 as its own Windows process (`tools/run_until_done.py --live`, log
   `saved_pages/run_until_done_2026-11-13.log`). Usual polite limits: honest user agent,
   3–6 s pauses (ethiopiarealty 8–15 s), at most 500 pages per site per day, and a **full
   stop at the first block, challenge, bad status or second connection failure** (the
@@ -361,8 +367,8 @@ These are **interim** numbers: the full scrape below has just started.
   the fixed price reader (owner approved).
 - BetDelala's 500 pages for 13 Nov were already used, so it starts at 00:10 on 14 Nov.
   About 2,650 BetDelala pages plus ~1,600 ethiopiarealty pages remain: **about 9 days** at
-  500 pages a day. If the laptop is switched off, the run stops and must be started again
-  (it continues where it left off).
+  500 pages a day. If the laptop is switched off, the run stops; it starts again at the next
+  log-in and continues where it left off.
 - The scrape only writes local files. Loading into the database is a separate step
   (`etl/prepare_web_listings.py`, then a backup, then `etl/load_web_listings.py --apply`),
   done by Claude when the owner asks, never between 10:00 and 12:00.
