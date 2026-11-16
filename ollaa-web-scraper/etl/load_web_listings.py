@@ -118,9 +118,11 @@ def row_values(r):
 #   clears the "price unusable" flag. Nothing is ever deleted.
 # price and sale/rent follow the preparation step (owner, 16 Nov 2026: a price per m2 in
 # the price box is never a total), so they are updated on every load as well
-_ALWAYS = ["source_url", "price", "price_basis", "price_as_advertised", "price_per_m2", "listing_type", "property_type", "location_code", "neighbourhood", "sub_city", "sub_city_unsure", "city", "latitude",
-           "longitude", "probable_dup", "property_group"]
-_IF_READER = ["currency", "area_sqm", "bedrooms", "scraped_at", "reader"]
+# (size and bedrooms too, since hand corrections of a size must reach the table: 16 Nov 2026)
+_ALWAYS = ["source_url", "price", "price_basis", "price_as_advertised", "price_per_m2", "listing_type", "area_sqm",
+           "bedrooms", "property_type", "location_code", "neighbourhood", "sub_city", "sub_city_unsure", "city",
+           "latitude", "longitude", "probable_dup", "property_group"]
+_IF_READER = ["currency", "scraped_at", "reader"]
 UPSERT = (
     f"INSERT INTO {TABLE} ({','.join(COLS)}) VALUES %s ON CONFLICT (content_hash) DO UPDATE SET "
     + ", ".join(f"{c} = EXCLUDED.{c}" for c in _ALWAYS) + ", "
@@ -169,20 +171,26 @@ GROUP BY property_group;
 
 
 # A row already in the table that the preparation step now treats as a repeat copy of a
-# fuller advert (same site, type, place, price and size) is flagged, never deleted.
-MARK_REPEAT = (f"UPDATE {TABLE} SET exact_repeat = TRUE, property_group = %s "
-               f"WHERE content_hash = %s AND exact_repeat IS NOT TRUE")
+# fuller advert (same site, type, place, price and size) is flagged, never deleted, and its
+# values are refreshed (so a corrected size or price reaches it too). Repeat copies that
+# are not in the table yet are never inserted.
+_REPEAT_COLS = [c for c in _ALWAYS if c != "property_group"]
+REFRESH_REPEAT = (f"UPDATE {TABLE} SET exact_repeat = TRUE, property_group = %s, "
+                  + ", ".join(f"{c} = %s" for c in _REPEAT_COLS) + " WHERE content_hash = %s")
 REPEATS_CSV = DEFAULT_CSV.parent / "web_listings_repeats.csv"
 
 
 def mark_repeats(cur, path=REPEATS_CSV):
+    """Flag and refresh repeat copies already in the table; returns how many were newly flagged."""
     if not pathlib.Path(path).exists():
         return 0
-    n = 0
+    cur.execute(f"SELECT COUNT(*) FROM {TABLE} WHERE exact_repeat")
+    before = cur.fetchone()[0]
     for r in csv.DictReader(open(path, encoding="utf-8")):
-        cur.execute(MARK_REPEAT, (r["kept_property_group"], r["content_hash"]))
-        n += cur.rowcount
-    return n
+        values = dict(zip(COLS, row_values(r)))
+        cur.execute(REFRESH_REPEAT, [r["kept_property_group"]] + [values[c] for c in _REPEAT_COLS] + [r["content_hash"]])
+    cur.execute(f"SELECT COUNT(*) FROM {TABLE} WHERE exact_repeat")
+    return cur.fetchone()[0] - before
 
 
 def read_csv(path):

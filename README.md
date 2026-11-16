@@ -91,8 +91,8 @@ The website names are the keys in `source_registry.py`.
 From the `ollaa-web-scraper` folder (see `THESIS_DATA_CHECK.md` and `DATA_QUALITY.md`):
 
 ```
-python tools/run_until_done.py --live          polite multi-day scrape (owner-approved runs only)
-powershell -File tools/start_scrape.ps1        start it if not running and not stopped (used at log-in)
+python tools/run_until_done.py --live --once   one day's share of the approved scrape (the daily task runs this)
+powershell -File tools/start_scrape.ps1        wait for the internet, then the daily share (task at 21:00)
 python etl/prepare_web_listings.py             offline: build the load-ready file and the sub-city table
 python etl/load_web_listings.py --apply        into web_listings (after a backup; never 10:00-12:00)
 ```

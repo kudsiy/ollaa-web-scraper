@@ -67,6 +67,15 @@ advertised" 2,236 rows, "calculated from price per m2" 76, "price per m2 only (n
 where `price` is empty). Two calculated totals rest on a doubtful size (see
 `THESIS_DATA_CHECK.md`). Table: 2,456 rows after the backup `backups/ollaa_2026-11-16b.dump`.
 
+**Hand corrections (16 Nov 2026, night)**, checked against the stored advert text and kept in
+`ollaa-web-scraper/data/manual_corrections.csv`: the Metro advert in Bole Bulbula is 130 m²
+for 16.6 million birr (the reader had 68 m², and 5,400 m² for its second copy); the
+"private real estate, Urael" advert is the Kazanchis project, 1 bedroom 97.18 m² (the
+reader had 18), total 80,000 × 97.18 = 7,774,400 birr, now in Kirkos. Size and bedrooms now
+follow the preparation step on every load, and repeat copies already in the table are
+refreshed too (never inserted). Table after the load: **2,889 rows** (backup
+`backups/ollaa_2026-11-16c.dump`).
+
 **Every price query should add** `WHERE NOT price_unusable AND NOT exact_repeat`.
 The sub-city of a row may change when the owner corrects the neighbourhood table; that is
 expected (the next load applies it).

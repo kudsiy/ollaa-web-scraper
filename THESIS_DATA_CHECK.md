@@ -498,3 +498,35 @@ Bole Japan 1, Bole Michael 1. They state: developer 11, down payment % 14, insta
 handover date 2, a discount 5, seller's price per m² in the text 3 (and 5 more put it in the
 price box). **11 of the 14 now have a usable total price and size** (was 6).
 Comparison group: 96 ready Bole apartments for sale (total ≥ 1 million birr, 20–400 m²).
+
+## Two flagged sizes fixed, and the count after tonight's pages (16 November 2026, night)
+
+Checked against the stored advert text, after a backup (`backups/ollaa_2026-11-16c.dump`):
+
+- **Metro Real Estate, Bole Bulbula**: the text says "ባለ 3 መኝታ 130 ካሬ = 16.6 ሚሊዮን"
+  (3 bedrooms, 130 m², 16.6 million; 30% down payment = 4.9 million; building over 85%
+  complete). Now 130 m², total 16,600,000 birr ("total from the advert text"), advertised
+  price per m² 127,400 kept. Both copies of the advert are corrected; they count once
+  (another Metro advert with the same values is the kept copy).
+- **"Private real estate, Urael"**: the text is about "the new Kazanchis project", from
+  80,000 birr per m², units of 97.18 / 120.97 / 161 m². The stored "18" was read from
+  "97.18"; the advert is the 1-bedroom unit, so 97.18 m² and 7,774,400 birr (calculated from
+  the price per m²). The place is **Kazanchis (Kirkos)**, not Urael, so it left Bole.
+
+Tonight's 500 BetDelala pages were loaded too (2,456 → 2,889 rows; 955 adverts with text).
+Off-plan apartments **with payment terms**, by sub-city (one row per property):
+
+| Sub-city | Count | With a usable total price and size |
+|---|---|---|
+| Kirkos | 48 | 47 |
+| Lemi Kura | 21 | 20 |
+| **Bole** | **18** | **16** |
+| Yeka | 12 | 12 |
+| Arada | 12 | 11 |
+| Kolfe | 4 | 4 |
+| Sheger | 2 | 2 |
+| No sub-city | 13 | 13 |
+| **Total** | **130** | |
+
+Bole's 18: "Bole" 7, Bole Bulbula 6, Haya Hulet (22) 2, Bole Adey Abeba 1, Bole Japan 1,
+Bole Michael 1. The project is now in maintenance until Phase 2 (`ROADMAP.md`).

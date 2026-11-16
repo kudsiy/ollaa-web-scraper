@@ -34,7 +34,8 @@ GAP_MIN = float(os.getenv("OLLAA_GAP_MIN", "3"))  # seconds between requests (ra
 GAP_MAX = float(os.getenv("OLLAA_GAP_MAX", "6"))
 FIELDS = ["source", "url", "price", "currency", "area_sqm", "bedrooms", "place", "listing_type", "scraped_at",
           "ad_text", "reader"]
-READER = "v2-2026-11-13"  # v2: details-box price (ethiopiarealty fix) + masked advert text
+READER = "v2-2026-11-13"
+LAST_RUN = {}  # what the last run() did: pages read, new listings, re-reads, still to read, error  # v2: details-box price (ethiopiarealty fix) + masked advert text
 RETRY_WAIT = 60  # seconds before the one retry after a connection drop or timeout
 TRANSIENT = (requests.exceptions.ConnectionError, requests.exceptions.Timeout)
 
@@ -86,6 +87,8 @@ def run(label, sitemap, batch, reread_old=False):
     do tomorrow) or "stopped: <reason>" (a block, challenge, bad status or second
     connection failure: the caller must not continue)."""
     print(f"\n===== {label}" + (" (re-reading old pages with the new reader)" if reread_old else ""))
+    LAST_RUN.clear()
+    LAST_RUN.update(site=label, read=0, new=0, reread=0, left="", error="")
     out = pg.BASE / label
     out.mkdir(parents=True, exist_ok=True)
     csv_file, done_log = out / "full_v2.csv", out / "done.log"
@@ -97,14 +100,17 @@ def run(label, sitemap, batch, reread_old=False):
         except TRANSIENT as e:
             if attempt == 2:
                 print(f"  could not read sitemap: {e!r} (after one retry)")
+                LAST_RUN["error"] = f"could not read sitemap ({type(e).__name__}, after one retry)"
                 return f"stopped: could not read sitemap ({e!r}, after one retry)"
             print(f"  sitemap: connection problem ({type(e).__name__}); waiting {RETRY_WAIT} s, then one retry", flush=True)
             time.sleep(RETRY_WAIT)
         except Exception as e:  # noqa: BLE001
             print(f"  could not read sitemap: {e!r}")
+            LAST_RUN["error"] = f"could not read sitemap ({type(e).__name__})"
             return f"stopped: could not read sitemap ({e!r})"
     if err or not urls:
         print(f"  {err or 'no listing URLs'} — stopping")
+        LAST_RUN["error"] = err or "no listing URLs"
         return f"stopped: {err or 'no listing URLs'}"
 
     done = set()
@@ -124,6 +130,7 @@ def run(label, sitemap, batch, reread_old=False):
     if not todo:
         left = plan_order(urls, done, have_text, 10**9, 10**9, reread_old)
         print("  nothing to do " + ("(daily cap reached)" if left else "(finished)"))
+        LAST_RUN["left"] = len(left)
         return "cap" if left else "finished"
 
     new_file = not csv_file.exists()
@@ -166,6 +173,8 @@ def run(label, sitemap, batch, reread_old=False):
     read_now = {r["url"] for r in rows}
     left = plan_order(urls, done | read_now, have_text | read_now, 10**9, 10**9, reread_old)
     print(f"  total done for {label}: {len(done | read_now)} / {len(urls)}; still to read: {len(left)}")
+    LAST_RUN.update(read=n, new=sum(1 for u in read_now if u not in done), left=len(left), error=stopped or "")
+    LAST_RUN["reread"] = n - LAST_RUN["new"]
     if stopped:
         return f"stopped: {stopped}"
     return "cap" if left else "finished"

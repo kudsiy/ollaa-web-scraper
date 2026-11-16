@@ -42,6 +42,7 @@ MAP_FILE = DATA / "neighbourhood_subcity.csv"
 LINKS_FILE = DATA / "same_property_links.csv"
 RULES_FILE = DATA / "subcity_rules.csv"     # owner's rules: names starting with ... are in sub-city ...
 EXTRA_FILE = DATA / "extra_places.csv"      # place names the owner uses that the place list lacks
+CORRECTIONS_FILE = DATA / "manual_corrections.csv"  # hand corrections checked against the advert text
 BACKFILL = OUT / "ad_texts_backfill.csv"
 SOURCES = ["betdelala", "ethiopiarealty"]
 PTYPES = [("apartment", r"apartment|flat|condo|አፓርት|ኮንዶ"), ("house", r"house|villa|home|ቤት|ቪላ|g\+\d"),
@@ -300,6 +301,49 @@ def apply_price_basis(rec):
     return rec
 
 
+BASIS_HAND = "total from the advert text (corrected by hand)"
+
+
+def read_corrections():
+    if not CORRECTIONS_FILE.exists():
+        return []
+    return list(csv.DictReader(open(CORRECTIONS_FILE, encoding="utf-8")))
+
+
+def apply_corrections(rows, corrections, L, mapping, rules, extras):
+    """Hand corrections (data/manual_corrections.csv), each checked against the advert's own
+    text. Applied after the price rule; a corrected size re-calculates a calculated total.
+    Fields: area_sqm, price_total, location_code. Returns how many were applied."""
+    by_url = defaultdict(list)
+    for c in corrections:
+        by_url[c["source_url"]].append(c)
+    done = 0
+    for r in rows:
+        for c in by_url.get(r["source_url"], []):
+            field, value = c["field"], c["value"].strip()
+            if field == "area_sqm":
+                r["area_sqm"] = float(value)
+                if r.get("price_basis") in (BASIS_CALC, BASIS_PPM_ONLY) and r.get("price_per_m2"):
+                    r["price"] = round(float(r["price_per_m2"]) * r["area_sqm"], 2)
+                    r["price_basis"] = BASIS_CALC
+            elif field == "price_total":
+                r["price"] = float(value)
+                r["price_basis"] = BASIS_HAND
+                r["listing_type"] = "sale"
+            elif field == "location_code":
+                r["location_code"] = value
+                r["neighbourhood"] = place_name(L, value, extras)
+                sub, unsure, _, _ = decide_sub_city(L, value, mapping, rules, extras)
+                r["sub_city"], r["sub_city_unsure"] = sub, "yes" if unsure else ""
+                r["city"] = L.city_of(value)
+                coords = L.coordinates(value) or (None, None, None)
+                r["latitude"], r["longitude"] = coords[0] or "", coords[1] or ""
+            else:
+                raise SystemExit(f"unknown correction field {field!r} in {CORRECTIONS_FILE}")
+            done += 1
+    return done
+
+
 def drop_exact_repeats(rows):
     """Same site, type, place, price and size: keep the most complete copy, and give it the
     advert texts of all the copies (so no copy's terms are lost). Returns the kept rows and
@@ -422,13 +466,20 @@ def main():
     mapping = read_map()  # owner columns kept; rebuild sub-cities with the refreshed file
     rows = build(read_rows(), L, mapping, rules, extras)
     rows = [apply_price_basis(r) for r in rows]
+    corrected = apply_corrections(rows, read_corrections(), L, mapping, rules, extras)
+    by_hash = {r["content_hash"]: r for r in rows}
     rows, repeats = drop_exact_repeats(rows)
     dropped = len(repeats)
     groups = group_same_property(rows)
+    # Repeat copies with their current (corrected) values: the loader refreshes the ones
+    # already in the table and flags them; it never inserts a repeat copy.
     with open(OUT / "web_listings_repeats.csv", "w", newline="", encoding="utf-8") as fh:
-        w = csv.writer(fh)
-        w.writerow(["content_hash", "kept_content_hash", "kept_property_group"])
-        w.writerows((h, kept, groups[kept]) for h, kept in repeats)
+        w = csv.DictWriter(fh, fieldnames=OUT_FIELDS + ["kept_content_hash", "kept_property_group"])
+        w.writeheader()
+        for h, kept in repeats:
+            rep = dict(by_hash[h], probable_dup="", property_group=groups[kept],
+                       kept_content_hash=kept, kept_property_group=groups[kept])
+            w.writerow({k: rep.get(k, "") for k in w.fieldnames})
     key = lambda r: (r["listing_type"], r["property_type"], r["price"], r["area_sqm"], r["bedrooms"], r["location_code"])
     usable = [r for r in rows if r["price"] and r["area_sqm"] and not (r["source"] == "ethiopiarealty" and not r["reader"])]
     multi = {k for k, c in Counter(key(r) for r in usable).items() if c > 1}
@@ -441,6 +492,7 @@ def main():
             r["property_group"] = groups[r["content_hash"]]
             w.writerow({k: r.get(k, "") for k in OUT_FIELDS})
     with_text = sum(1 for r in rows if r["ad_text"])
+    print(f"hand corrections applied: {corrected}")
     print(f"prepared {len(rows)} rows ({dropped} exact repeats dropped); with advert text: {with_text}; "
           f"neighbourhood table: {MAP_FILE}")
     return 0

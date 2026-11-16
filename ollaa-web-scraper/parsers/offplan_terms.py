@@ -207,7 +207,7 @@ def extract_terms(text, url=""):
     if not sched:
         c = DISC_CASH.search(t)
         if c:
-            pct = c.group(1) or c.group(4)
+            pct = c.group(1) or c.group(3)
             sched.append(f"{pct}% off for cash/full payment")
     if not sched:
         f = DISC_FLAT.search(t)

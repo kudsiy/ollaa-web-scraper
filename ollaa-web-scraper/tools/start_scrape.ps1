@@ -1,6 +1,7 @@
-# Starts the owner-approved multi-day scrape (tools/run_until_done.py --live) if it is not
-# already running. Run by the Windows task "OllaaWebScrape" each time the owner logs in
-# (owner approved, 15 Nov 2026), so a restart of the laptop does not end the scrape.
+# Runs one day's share of the owner-approved scrape (tools/run_until_done.py --live --once)
+# if it is not already running. Run by the Windows task "OllaaWebScrape" once a day at a
+# fixed time (owner, 16 Nov 2026; if the laptop was off then, Windows runs it as soon as it
+# can). Each run adds a line to saved_pages/daily_log.csv.
 # It never starts after a stop: if SCRAPE_STOPPED.txt or SCRAPE_FINISHED.txt exists, or a
 # run log says "STOPPED for good", it does nothing. Reads no passwords; writes only logs.
 $ErrorActionPreference = "Stop"
@@ -34,6 +35,6 @@ if (-not $online) { Say "no internet after 15 minutes; not starting this time"; 
 $python = (Get-Command python -ErrorAction SilentlyContinue).Source
 if (-not $python) { Say "python not found"; exit 1 }
 $day = Get-Date -Format "yyyy-MM-dd"
-$cmd = "cmd.exe /c `"`"$python`" -u -W ignore tools\run_until_done.py --live >> saved_pages\run_until_done_$day.log 2>> saved_pages\run_until_done_$day.err`""
+$cmd = "cmd.exe /c `"`"$python`" -u -W ignore tools\run_until_done.py --live --once >> saved_pages\run_until_done_$day.log 2>> saved_pages\run_until_done_$day.err`""
 $r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $cmd; CurrentDirectory = $wd }
 Say "started (result $($r.ReturnValue), pid $($r.ProcessId))"

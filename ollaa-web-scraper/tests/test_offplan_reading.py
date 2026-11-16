@@ -323,3 +323,57 @@ def test_price_per_m2_in_the_price_box():
     assert P.apply_price_basis(total)["price"] == 9000000.0 and total["price_per_m2"] == ""
     old = _row("https://e.invalid/property/flat-for-sale", 30000.0, 100.0, src="ethiopiarealty")
     assert P.apply_price_basis(old)["price"] == 30000.0
+
+
+def test_hand_corrections():
+    from types import SimpleNamespace as NS
+    from etl import prepare_web_listings as P
+    places = {"kazanchis": NS(name="Kazanchis", sub_city="Kirkos", parent=None, lat=9.01, lon=38.77)}
+    L = NS(PLACES=places, UNKNOWN="other_addis", NOISE="noise", city_of=lambda c: "ADDIS_ABABA",
+           coordinates=lambda c: (9.01, 38.77, "Kirkos"), find_location=lambda s: "other_addis")
+    a = P.apply_price_basis(dict(_row("https://x.invalid/property/apartment-for-sale-urael", 80000.0, 18.0, 1), listing_type="rent"))
+    b = P.apply_price_basis(_row("https://x.invalid/property/apartment-for-sale-metro", 127400.0, 68.0, 3))
+    corr = [{"source_url": a["source_url"], "field": "area_sqm", "value": "97.18"},
+            {"source_url": a["source_url"], "field": "location_code", "value": "kazanchis"},
+            {"source_url": b["source_url"], "field": "area_sqm", "value": "130"},
+            {"source_url": b["source_url"], "field": "price_total", "value": "16600000"}]
+    assert P.apply_corrections([a, b], corr, L, {}, [], []) == 4
+    assert a["area_sqm"] == 97.18 and a["price"] == round(80000 * 97.18, 2) and a["price_basis"] == P.BASIS_CALC
+    assert a["sub_city"] == "Kirkos" and a["neighbourhood"] == "Kazanchis"
+    assert b["area_sqm"] == 130 and b["price"] == 16600000 and b["price_basis"] == P.BASIS_HAND
+    assert b["price_per_m2"] == 127400.0  # the advertised price per m2 is kept
+
+
+def test_cash_discount_written_after_the_payment_words():
+    r = extract_terms("Pay in full and get 7% discount. Apartment for sale in Ayat.")
+    assert r["discount_schedule"] == "7% off for cash/full payment"
+    r = extract_terms("10% discount for cash buyers")
+    assert r["discount_schedule"] == "10% off for cash/full payment"
+
+
+def test_daily_once_mode_writes_the_log(monkeypatch, tmp_path):
+    import csv as _csv
+    from tools import run_until_done as R
+    monkeypatch.setattr(R, "STOP_FILE", tmp_path / "SCRAPE_STOPPED.txt")
+    monkeypatch.setattr(R, "DONE_FILE", tmp_path / "SCRAPE_FINISHED.txt")
+    monkeypatch.setattr(R, "DAILY_LOG", tmp_path / "daily_log.csv")
+    monkeypatch.setattr(R.sys, "argv", ["run_until_done.py", "--live", "--once"])
+    waited = []
+    monkeypatch.setattr(R, "wait_until_tomorrow", lambda: waited.append(1))
+
+    def fake_run(label, *a, **k):
+        R.scrape_site.LAST_RUN.clear()
+        R.scrape_site.LAST_RUN.update(site=label, read=500, new=480, reread=20, left=1278, error="")
+        return "cap"
+    monkeypatch.setattr(R.scrape_site, "run", fake_run)
+    assert R.main() == 0 and waited == []          # one day's share, then exit (no waiting)
+    rows = list(_csv.DictReader(open(R.DAILY_LOG, encoding="utf-8")))
+    assert rows[0]["site"] == "betdelala" and rows[0]["pages_read"] == "500" and rows[0]["new_listings"] == "480"
+    assert rows[0]["status"] == "cap" and rows[0]["error"] == ""
+
+
+def test_run_records_pages_and_new_listings(monkeypatch, tmp_path):
+    _fake_site(monkeypatch, tmp_path, [200, 200, 403])
+    status = scrape_site.run("site", "https://x.invalid/sitemap.xml", 10)
+    r = scrape_site.LAST_RUN
+    assert status.startswith("stopped") and r["read"] == 2 and r["new"] == 2 and "403" in r["error"]

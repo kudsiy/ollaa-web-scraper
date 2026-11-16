@@ -1,12 +1,19 @@
 # Rules for working on ollaa-web-scraper
 
+**Roadmap (owner, 16 November 2026): read `ROADMAP.md`.** Ollaa is first a company product.
+Four phases shared with Ollaa-Telegram; finish one before starting the next and **add no
+new features outside the current phase**. Until Phase 2 starts this project only keeps the
+approved scrape running, loads it when asked, and fixes data problems the owner points
+out. `MERGE_NOTES.md` lists what must be decided before Phase 2.
+
 Read `STATUS.md` first: it has the audit findings (30 October 2026) and the numbered fix
 list (W1, W2, …). The safety fixes W1–W4 are done.
 
-**The project is parked** (owner's decision, 31 October 2026, after the Google Sheet check
-in STATUS.md): do not run the scrapers, do not revive them, and do not switch the GitHub
-automation back on unless the owner asks for it in a new decision. Maintenance and offline
-work are fine; every run that visits websites needs the owner's approval for that run.
+The project was parked on 31 October 2026 and un-parked by the owner on 1 November 2026 for
+the polite multi-site scrape (W16), which now runs once a day (below). The old scrapers
+(`scheduler.py`, `etl/unified_exporter.py`) and the GitHub automation stay off unless the
+owner asks in a new decision; every other run that visits websites needs the owner's
+approval for that run.
 Before any change to the scrapers, read `SCRAPING_REVIEW.md` (why they delivered so little).
 Ethiopia Property Centre blocks automated readers with a Cloudflare bot check (pilot W15,
 31 October 2026). Never get around such a check on any site: no headless browser that
@@ -83,16 +90,22 @@ Ollaa-Telegram scraper depends on it. Protecting it comes before everything else
 - The sister project's place list is read (never changed) from the folder in `.env`
   `SISTER_PLACES_DIR`; never write that project's name into a `.py` file (the no-Telegram
   guard test would rightly fail).
-- The multi-day scrape is `tools/run_until_done.py --live` (owner approved, 13 Nov 2026):
+- The approved scrape is `tools/run_until_done.py --live` (owner approved, 13 Nov 2026):
   BetDelala off-plan/developer adverts first, then the rest, then the ethiopiarealty
   re-read; 500 pages/site/day; stops for good at the first block or error. Loading is a
   separate step: `etl/prepare_web_listings.py`, backup, `etl/load_web_listings.py --apply`.
-- The Windows task `OllaaWebScrape` (owner approved, 15 Nov 2026) runs
-  `tools/start_scrape.ps1` at each log-in: it starts the runner only if it is not running
-  and has not stopped. A stop is final: the runner writes `saved_pages/SCRAPE_STOPPED.txt`
-  (or `SCRAPE_FINISHED.txt`) and nothing restarts while it exists. Remove that file only on
-  the owner's word, after checking why it stopped. Remove the task
+- The Windows task `OllaaWebScrape` (owner, 16 Nov 2026) runs `tools/start_scrape.ps1`
+  **once a day at 21:00** (or as soon as the laptop is on, if it was off): it waits up to 15
+  minutes for the internet, then runs `tools/run_until_done.py --live --once` (one day's
+  share, at most 500 pages per site) unless it is already running or has stopped. Each run
+  adds a line to `saved_pages/daily_log.csv`. A stop is final: the runner writes
+  `saved_pages/SCRAPE_STOPPED.txt` (or `SCRAPE_FINISHED.txt`) and nothing restarts while it
+  exists. Clear it only on the owner's word, after checking why it stopped (rename it and
+  the stopped log; never delete them). Remove the task
   (`Unregister-ScheduledTask OllaaWebScrape`) when the scrape is finished or the owner asks.
+- Hand corrections, each checked against the stored advert text, go in
+  `ollaa-web-scraper/data/manual_corrections.csv` (fields `area_sqm`, `price_total`,
+  `location_code`); the preparation step applies them on every load.
 
 ## GitHub automation
 
