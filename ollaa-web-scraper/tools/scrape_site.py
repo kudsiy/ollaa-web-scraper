@@ -89,11 +89,20 @@ def run(label, sitemap, batch, reread_old=False):
     out = pg.BASE / label
     out.mkdir(parents=True, exist_ok=True)
     csv_file, done_log = out / "full_v2.csv", out / "done.log"
-    try:
-        urls, err = pg.collect_listing_urls(sitemap)
-    except Exception as e:  # noqa: BLE001
-        print(f"  could not read sitemap: {e!r}")
-        return f"stopped: could not read sitemap ({e!r})"
+    urls = err = None
+    for attempt in (1, 2):  # same rule as for pages: a connection drop or timeout gets one retry
+        try:
+            urls, err = pg.collect_listing_urls(sitemap)
+            break
+        except TRANSIENT as e:
+            if attempt == 2:
+                print(f"  could not read sitemap: {e!r} (after one retry)")
+                return f"stopped: could not read sitemap ({e!r}, after one retry)"
+            print(f"  sitemap: connection problem ({type(e).__name__}); waiting {RETRY_WAIT} s, then one retry", flush=True)
+            time.sleep(RETRY_WAIT)
+        except Exception as e:  # noqa: BLE001
+            print(f"  could not read sitemap: {e!r}")
+            return f"stopped: could not read sitemap ({e!r})"
     if err or not urls:
         print(f"  {err or 'no listing URLs'} — stopping")
         return f"stopped: {err or 'no listing URLs'}"

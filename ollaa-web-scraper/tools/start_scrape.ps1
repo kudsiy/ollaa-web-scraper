@@ -22,6 +22,15 @@ if ($stoppedLog) {
     exit 0
 }
 
+# Right after log-in the internet may not be connected yet (16 Nov 2026 the run stopped
+# because betdelala.com could not be found). Wait up to 15 minutes for it; if it never
+# comes, do nothing (this is not a stop: the next log-in tries again).
+$online = $false
+for ($i = 0; $i -lt 30; $i++) {
+    try { [System.Net.Dns]::GetHostAddresses("betdelala.com") | Out-Null; $online = $true; break } catch { Start-Sleep -Seconds 30 }
+}
+if (-not $online) { Say "no internet after 15 minutes; not starting this time"; exit 0 }
+
 $python = (Get-Command python -ErrorAction SilentlyContinue).Source
 if (-not $python) { Say "python not found"; exit 1 }
 $day = Get-Date -Format "yyyy-MM-dd"

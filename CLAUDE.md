@@ -74,6 +74,9 @@ Ollaa-Telegram scraper depends on it. Protecting it comes before everything else
 - Sub-cities come from `ollaa-web-scraper/data/neighbourhood_subcity.csv`; the owner's
   column `owner_sub_city` always wins (owner works in land administration; the thesis uses
   the official Bole Sub-City boundary). Never overwrite the owner's columns.
+  The owner's prefix rules are in `data/subcity_rules.csv` (16 Nov 2026; longest prefix
+  wins) and the place names the sister list lacks in `data/extra_places.csv`; the owner's
+  own table cell beats the rules.
 - The sister project's place list is read (never changed) from the folder in `.env`
   `SISTER_PLACES_DIR`; never write that project's name into a `.py` file (the no-Telegram
   guard test would rightly fail).

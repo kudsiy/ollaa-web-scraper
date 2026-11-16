@@ -15,6 +15,10 @@ _PATTERNS = [
     re.compile(r"\b(?:tel|callto|sms|whatsapp|viber):[^\s\"'<>]*", re.I),
     # e-mail addresses
     re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+"),
+    # a full number written without spaces (09xxxxxxxx, 2519xxxxxxxx), even when commas
+    # separate several numbers ("0911…,0922…"): thousands groups have 3 digits, so a run of
+    # 10+ digits next to a comma is never part of a price
+    re.compile(r"(?<!\d)(?:\+?251|0)[1-9]\d{8}(?!\d)"),
     # Ethiopian numbers: +251 / 251 / 0 followed by 9 digits (mobile 9xx / 7xx, landline 1x ...)
     re.compile(r"(?<![\w,])(?:\+|00)?251" + _SEP + r"\(?0?\)?" + _SEP + r"[1-9](?:" + _SEP + r"\d){8}(?![\d,])"),
     re.compile(r"(?<![\w,])0" + _SEP + r"[1-9](?:" + _SEP + r"\d){8}(?![\d,])"),

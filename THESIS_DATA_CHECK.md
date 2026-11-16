@@ -372,3 +372,72 @@ These are **interim** numbers: the full scrape below has just started.
 - The scrape only writes local files. Loading into the database is a separate step
   (`etl/prepare_web_listings.py`, then a backup, then `etl/load_web_listings.py --apply`),
   done by Claude when the owner asks, never between 10:00 and 12:00.
+
+## Owner's sub-city rules and the first off-plan scrape (16 November 2026)
+
+**The owner's rules (land administration), now applied** (`ollaa-web-scraper/data/subcity_rules.csv`):
+
+- Every name starting with **Bole** is in **Bole Sub-City** — except **Bole Arabsa**, which
+  is not (its sub-city is left blank and marked unsure until the owner names it).
+- **Gerji** is in **Bole**.
+- Names starting with **Ayat, Summit, Feyel Bet, Figa, CMC, Wesen, Safari, Yetebaberut,
+  Gurd Shola** are in **Lemi Kura**.
+
+The longest matching name wins ("Bole Arabsa" before "Bole"), and an entry the owner types
+in `owner_sub_city` in `data/neighbourhood_subcity.csv` still beats every rule. Feyel Bet,
+Yetebaberut and Safari are not in the sister project's place list, so they were added here
+(`data/extra_places.csv`, English and Amharic spellings).
+
+**What the scrape read.** On 15 Nov the scrape read 433 BetDelala pages (off-plan and
+developer adverts first). On 16 Nov the log-in restart found no internet yet and, as
+designed, stopped for good (`saved_pages/SCRAPE_STOPPED.txt`); see the end of this section.
+After a backup (`backups/ollaa_2026-11-16.dump`, checked) `web_listings` went from **2,048
+to 2,442 rows** (394 new; nothing deleted); **512 adverts now have their (masked) text**.
+
+### Off-plan apartments WITH payment terms, by sub-city (16 Nov)
+
+One row per property (adverts of the same property counted once; view `web_offplan_properties`).
+
+| Sub-city | Off-plan apartments with payment terms | Still unsure | Price looks like a price per m², not a total |
+|---|---|---|---|
+| Nifas Silk | 19 | 19 (all "Sarbet / Old Airport") | 6 |
+| Lemi Kura | 16 | 0 | 2 |
+| **Bole** | **14** | 2 (Haya Hulet / 22) | 5 |
+| Arada | 10 | 0 | 3 |
+| Kirkos | 6 | 1 | 1 |
+| Kolfe | 3 | 2 | 1 |
+| Sheger | 2 | 2 | 0 |
+| Yeka | 1 | 1 | 0 |
+| No sub-city yet | 30 | Bulgaria 12, Awere 9, no place found 8, Bisrate Gabriel 1 | 12 |
+| **Total** | **101** | | |
+
+**Bole's 14**: Bole Bulbula 5, "Bole" 4, Haya Hulet (22) 2, Bole Adey Abeba 1, Bole Japan 1,
+Bole Michael 1. What they state: developer 11, down payment % 14, instalment plan 1,
+payments tied to construction stages 0, handover date 2, a discount 5 (none with a clear
+cash/early-payment schedule — mostly "X% discount", terms not stated), seller's price per
+m² 3. **Only 6 of the 14 have a usable total price and size**: in 5 the "price" is really a
+price per m² (e.g. 90,000–127,400 birr), which the site puts in its price field.
+
+**Comparison group:** 92 ready Bole apartments for sale with a total price ≥ 1 million birr
+and a size of 20–400 m².
+
+**Still to decide by the owner** (neighbourhoods with off-plan adverts and no sure
+sub-city): Sarbet / Old Airport (19), Bulgaria (12), Awere (9), Haya Hulet / 22 (2), and the
+smaller ones in `data/neighbourhood_subcity.csv` (Megenagna, Wello Sefer, Meskel Flower,
+Urael, Dembel, Lebu, Jemo, Gelan, Alem Bank, Garment, Signal, Bisrate Gabriel, Bole Arabsa).
+
+### Two problems found and fixed on 16 Nov
+
+- **A phone number got through the masking**: two numbers written back to back with a comma
+  ("09…,09…"). The masking skipped numbers touching a comma (to protect prices like
+  35,000,000). Fixed (a 10-digit 0… / 251… number is always masked; thousands groups have 3
+  digits, so prices are safe); 5 scraped rows on the laptop and the one database row were
+  re-masked. A few **web addresses themselves contain an agent's phone number**: the
+  database now stores those 7 addresses masked. The scraper's own resume files on the
+  laptop (`done.log`, `full.csv`, `full_v2.csv`) still hold the full addresses, because it
+  needs them to know which pages it has read; they are never committed.
+  Check after the fix: 0 database rows with a phone-like number in the text or address.
+- **The log-in restart started before the internet was connected** and so stopped for good.
+  The start script now waits up to 15 minutes for the internet (and does nothing if it never
+  comes), and the website's page list now gets the same one retry after a minute as single
+  pages. The stop file stays until the owner says to clear it.

@@ -242,3 +242,64 @@ def test_runner_marks_finished(monkeypatch, tmp_path):
     monkeypatch.setattr(R.sys, "argv", ["run_until_done.py", "--live"])
     monkeypatch.setattr(R.scrape_site, "run", lambda *a, **k: "finished")
     assert R.main() == 0 and R.DONE_FILE.exists() and R.main() == 3
+
+
+def test_owner_subcity_rules():
+    """Owner, 16 Nov 2026: Bole* (except Bole Arabsa) and Gerji -> Bole; Ayat, Summit,
+    Feyel Bet, Figa, CMC, Wesen, Safari, Yetebaberut, Gurd Shola -> Lemi Kura."""
+    import re
+    from types import SimpleNamespace as NS
+    from etl import prepare_web_listings as P
+    places = {"bole_bulbula": NS(name="Bole Bulbula", sub_city="Bole", parent=None),
+              "bole_arabsa": NS(name="Bole Arabsa", sub_city="Bole", parent=None),
+              "bole_atlas": NS(name="Atlas", sub_city="Bole", parent=None),
+              "gerji": NS(name="Gerji", sub_city="Yeka", parent=None),
+              "cmc_michael": NS(name="CMC", sub_city="Yeka", parent=None),
+              "ayat_zone": NS(name="Ayat", sub_city="Bole", parent=None),
+              "gurd_shola": NS(name="Gurd Shola", sub_city="Yeka", parent=None),
+              "sholla": NS(name="Shola", sub_city="Yeka", parent=None),
+              "kazanchis": NS(name="Kazanchis", sub_city="Kirkos", parent=None)}
+    L = NS(PLACES=places, UNKNOWN="other_addis", NOISE="noise",
+           find_location=lambda s: next((c for c in places if places[c].name.lower() in s.lower()), "other_addis"))
+    rules, extras = P.read_rules(), P.read_extras()
+    sub = lambda code: P.decide_sub_city(L, code, {}, rules, extras)[0]  # noqa: E731
+    assert sub("bole_bulbula") == sub("bole_atlas") == sub("gerji") == "Bole"
+    assert sub("bole_arabsa") == "" and P.decide_sub_city(L, "bole_arabsa", {}, rules, extras)[1] is True
+    assert sub("cmc_michael") == sub("ayat_zone") == sub("gurd_shola") == "Lemi Kura"
+    assert sub("sholla") == "Yeka" and sub("kazanchis") == "Kirkos"
+    for words, name in [("3 bedroom yetebaberut cmc", "Yetebaberut"), ("ፍየል ቤት አካባቢ", "Feyel Bet"), ("safari area", "Safari")]:
+        code = P.find_code(L, words, "", extras)
+        assert P.place_name(L, code, extras) == name and sub(code) == "Lemi Kura"
+    # the owner's own cell in the table still beats every rule
+    assert P.decide_sub_city(L, "cmc_michael", {"cmc_michael": {"owner_sub_city": "Yeka"}}, rules, extras)[0] == "Yeka"
+
+
+def test_numbers_joined_by_commas_are_masked():
+    out = mask_contacts("call 0911234567,0922334455 or 251911234567,+251922334455")
+    assert not any(ch.isdigit() for ch in out.replace(MASK, "")), out
+    assert mask_contacts("price 1,250,000 or 12,500,000 birr") == "price 1,250,000 or 12,500,000 birr"
+
+
+def test_loader_masks_phone_in_web_address():
+    from etl import load_web_listings as lw
+    row = {"source": "betdelala", "source_url": "https://x.invalid/property/flat-for-sale-call-0911234567",
+           "price": "5000000", "content_hash": "abc"}
+    values = dict(zip(lw.COLS, lw.row_values(row)))
+    assert "0911234567" not in values["source_url"] and values["source_url"].endswith(MASK)
+    assert values["content_hash"] == "abc"
+
+
+def test_sitemap_connection_drop_gets_one_retry(monkeypatch, tmp_path):
+    import requests as rq
+    monkeypatch.setattr(scrape_site.pg, "BASE", tmp_path)
+    waits = []
+    monkeypatch.setattr(scrape_site.time, "sleep", lambda s: waits.append(s))
+    calls = []
+
+    def flaky(sm):
+        calls.append(sm)
+        raise rq.exceptions.ConnectionError("no internet yet")
+    monkeypatch.setattr(scrape_site.pg, "collect_listing_urls", flaky)
+    status = scrape_site.run("site", "https://x.invalid/sitemap.xml", 5)
+    assert status.startswith("stopped") and "after one retry" in status
+    assert len(calls) == 2 and waits == [scrape_site.RETRY_WAIT]

@@ -40,12 +40,15 @@ OUT = PAGES / "_load"
 DATA = ROOT / "data"
 MAP_FILE = DATA / "neighbourhood_subcity.csv"
 LINKS_FILE = DATA / "same_property_links.csv"
+RULES_FILE = DATA / "subcity_rules.csv"     # owner's rules: names starting with ... are in sub-city ...
+EXTRA_FILE = DATA / "extra_places.csv"      # place names the owner uses that the place list lacks
 BACKFILL = OUT / "ad_texts_backfill.csv"
 SOURCES = ["betdelala", "ethiopiarealty"]
 PTYPES = [("apartment", r"apartment|flat|condo|አፓርት|ኮንዶ"), ("house", r"house|villa|home|ቤት|ቪላ|g\+\d"),
           ("office", r"office|ቢሮ"), ("shop", r"shop|store|ሱቅ"), ("land", r"land|plot|ቦታ|መሬት"),
           ("building", r"building|ህንፃ|ሕንፃ")]
-MAP_FIELDS = ["neighbourhood", "location_code", "sub_city_used", "place_list_sub_city", "unsure", "why_unsure",
+MAP_FIELDS = ["neighbourhood", "location_code", "sub_city_used", "owner_rule", "place_list_sub_city", "unsure",
+              "why_unsure",
               "offplan_or_developer_adverts", "owner_sub_city", "owner_note"]
 
 # Claude's notes on names that may sit in more than one sub-city, or that the place list
@@ -131,6 +134,65 @@ def place_list_sub_city(L, code):
     return ""
 
 
+def read_rules():
+    """Owner's prefix rules, longest prefix first (so 'bole arabsa' beats 'bole')."""
+    if not RULES_FILE.exists():
+        return []
+    rules = [r for r in csv.DictReader(open(RULES_FILE, encoding="utf-8")) if r["name_starts_with"].strip()]
+    return sorted(rules, key=lambda r: -len(r["name_starts_with"].strip()))
+
+
+def read_extras():
+    if not EXTRA_FILE.exists():
+        return []
+    return [(r["name"], re.compile(r["pattern"], re.I)) for r in csv.DictReader(open(EXTRA_FILE, encoding="utf-8"))]
+
+
+def extra_code(name):
+    return "extra_" + re.sub(r"\W+", "_", name.lower()).strip("_")
+
+
+def place_name(L, code, extras):
+    if code in L.PLACES:
+        return L.PLACES[code].name
+    for name, _ in extras:
+        if extra_code(name) == code:
+            return name
+    return ""
+
+
+def find_code(L, where, text, extras):
+    """Owner's extra names first, then the place list; the advert text only if the web
+    address and place field name no place."""
+    for source in (where, text[:600] if text else ""):
+        if not source:
+            continue
+        for name, rx in extras:
+            if rx.search(source):
+                return extra_code(name)
+        code = L.find_location(source)
+        if code not in (L.UNKNOWN, L.NOISE, None):
+            return L.canonical(code) if hasattr(L, "canonical") else code
+    return L.find_location(where)
+
+
+def decide_sub_city(L, code, mapping, rules, extras):
+    """(sub_city, unsure, why, rule): the owner's own cell in the table wins, then the
+    owner's prefix rules, then the place list."""
+    m = mapping.get(code, {})
+    own = (m.get("owner_sub_city") or "").strip()
+    if own:
+        return own, False, "", "owner's table cell"
+    name = place_name(L, code, extras).lower()
+    words = (code or "").replace("_", " ").lower()
+    for r in rules:
+        prefix = r["name_starts_with"].strip().lower()
+        if name.startswith(prefix) or words.startswith(prefix):
+            sub = r["sub_city"].strip()
+            return sub, not sub, ("" if sub else r["note"]), f"starts with '{prefix}'"
+    return place_list_sub_city(L, code), code in UNSURE, UNSURE.get(code, ""), ""
+
+
 def read_map():
     if not MAP_FILE.exists():
         return {}
@@ -166,18 +228,13 @@ def read_rows():
     return list(rows.values())
 
 
-def build(rows, L, mapping):
+def build(rows, L, mapping, rules=(), extras=()):
     out = []
     for r in rows:
         url, text = r["url"], r.get("ad_text") or ""
         where = f"{r.get('place', '')} {slug_words(url)}"
-        code = L.find_location(where)
-        if code in (L.UNKNOWN, L.NOISE, None) and text:
-            code = L.find_location(text[:600])
-        code = L.canonical(code) if hasattr(L, "canonical") and code else code
-        m = mapping.get(code, {})
-        listed = place_list_sub_city(L, code)
-        sub = (m.get("owner_sub_city") or "").strip() or listed
+        code = find_code(L, where, text, extras)
+        sub, unsure, _, _ = decide_sub_city(L, code, mapping, rules, extras)
         coords = L.coordinates(code) or (None, None, None)
         terms = terms_for(text, url) if text else {}
         rec = {
@@ -186,9 +243,9 @@ def build(rows, L, mapping):
             "listing_type": r.get("listing_type") or "", "property_type": ptype(f"{where} {text[:200]}"),
             "area_sqm": fnum(r.get("area_sqm")) or "",
             "bedrooms": int(fnum(r.get("bedrooms"))) if fnum(r.get("bedrooms")) else "",
-            "location_code": code or "", "neighbourhood": L.PLACES[code].name if code in L.PLACES else "",
-            "sub_city": sub, "sub_city_unsure": "yes" if (code in UNSURE and not (m.get("owner_sub_city") or "").strip()) else "",
-            "city": L.city_of(code), "latitude": coords[0] or "", "longitude": coords[1] or "",
+            "location_code": code or "", "neighbourhood": place_name(L, code, extras),
+            "sub_city": sub, "sub_city_unsure": "yes" if unsure else "",
+            "city": "ADDIS_ABABA" if str(code).startswith("extra_") else L.city_of(code), "latitude": coords[0] or "", "longitude": coords[1] or "",
             "scraped_at": r.get("scraped_at") or "", "reader": r.get("reader") or "", "ad_text": text,
             "content_hash": hashlib.sha256(f"{r['source']}|{url}".encode()).hexdigest(),
             "_terms": terms,
@@ -262,7 +319,7 @@ def group_same_property(rows):
     return {h: find(h)[:16] for h in parent}
 
 
-def write_map(rows, L, mapping, extra_urls=()):
+def write_map(rows, L, mapping, extra_urls=(), rules=(), extras=()):
     """Every neighbourhood named in off-plan / developer adverts (scraped, or only known
     from the sitemap address so far), with the sub-city used; keeps the owner's columns."""
     counts = Counter()
@@ -273,18 +330,18 @@ def write_map(rows, L, mapping, extra_urls=()):
     seen = {r["source_url"] for r in rows}
     for u in extra_urls:
         if u not in seen and offplan_url_signal(u):
-            counts[L.find_location(slug_words(u))] += 1
+            counts[find_code(L, slug_words(u), "", extras)] += 1
     lines = []
     for code, n in counts.most_common():
         if code in ("", L.UNKNOWN, L.NOISE):
             continue
         old = mapping.get(code, {})
-        listed = place_list_sub_city(L, code)
         owner = (old.get("owner_sub_city") or "").strip()
+        used, unsure, why, rule = decide_sub_city(L, code, mapping, rules, extras)
         lines.append({
-            "neighbourhood": L.PLACES[code].name if code in L.PLACES else code, "location_code": code,
-            "sub_city_used": owner or listed, "place_list_sub_city": listed,
-            "unsure": "" if owner else ("yes" if code in UNSURE else ""), "why_unsure": UNSURE.get(code, ""),
+            "neighbourhood": place_name(L, code, extras) or code, "location_code": code,
+            "sub_city_used": used, "owner_rule": rule, "place_list_sub_city": place_list_sub_city(L, code),
+            "unsure": "yes" if unsure else "", "why_unsure": why,
             "offplan_or_developer_adverts": n, "owner_sub_city": owner, "owner_note": old.get("owner_note", ""),
         })
     for code, old in mapping.items():  # keep rows the owner already edited, even if no advert now
@@ -312,11 +369,11 @@ OUT_FIELDS = ["source", "source_url", "price", "currency", "listing_type", "prop
 
 def main():
     L = _locations()
-    mapping = read_map()
-    rows = build(read_rows(), L, mapping)
-    write_map(rows, L, mapping, sitemap_urls())
+    mapping, rules, extras = read_map(), read_rules(), read_extras()
+    rows = build(read_rows(), L, mapping, rules, extras)
+    write_map(rows, L, mapping, sitemap_urls(), rules, extras)
     mapping = read_map()  # owner columns kept; rebuild sub-cities with the refreshed file
-    rows = build(read_rows(), L, mapping)
+    rows = build(read_rows(), L, mapping, rules, extras)
     rows, repeats = drop_exact_repeats(rows)
     dropped = len(repeats)
     groups = group_same_property(rows)

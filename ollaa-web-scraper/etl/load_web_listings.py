@@ -58,10 +58,10 @@ NEW_COLUMNS = [
     ("price_unusable", "BOOLEAN DEFAULT FALSE"),
     ("price_note", "TEXT"),
     ("ad_text_masked", "TEXT"),
-    ("developer", "VARCHAR(200)"),
-    ("construction_status", "VARCHAR(80)"),
+    ("developer", "TEXT"),
+    ("construction_status", "TEXT"),
     ("construction_progress_pct", "NUMERIC(5,1)"),
-    ("finish_level", "VARCHAR(80)"),
+    ("finish_level", "TEXT"),
     ("down_payment_pct", "NUMERIC(5,1)"),
     ("down_payment_amount", "NUMERIC(15,2)"),
     ("instalment_plan", "TEXT"),
@@ -73,7 +73,7 @@ NEW_COLUMNS = [
     ("price_per_m2_semi", "NUMERIC(12,2)"),
     ("price_per_m2_full", "NUMERIC(12,2)"),
     ("has_payment_terms", "BOOLEAN"),
-    ("neighbourhood", "VARCHAR(80)"),
+    ("neighbourhood", "TEXT"),
     ("sub_city_unsure", "BOOLEAN"),
     ("property_group", "VARCHAR(16)"),
     ("exact_repeat", "BOOLEAN DEFAULT FALSE"),
@@ -96,6 +96,10 @@ def row_values(r):
     """One CSV row -> a tuple in COLS order. The advert text is masked again here, and a row
     whose text would still hold a contact is stored without text."""
     base = [(r.get(c) or None) if c not in YES_NO else (r.get(c) == "yes") for c in BASE_COLS]
+    # a few web addresses carry the agent's phone number in them: store the address masked
+    # (content_hash, made from the full address before loading, still identifies the row)
+    i = BASE_COLS.index("source_url")
+    base[i] = mask_contacts(base[i]) if base[i] else base[i]
     text = mask_contacts(r.get("ad_text") or r.get("ad_text_masked") or "")
     if has_contact(text):
         text = ""
@@ -109,7 +113,7 @@ def row_values(r):
 # - advert text and terms are replaced only when the new row has text;
 # - price, size and the rest only when the new row was read by the new reader, which also
 #   clears the "price unusable" flag. Nothing is ever deleted.
-_ALWAYS = ["property_type", "location_code", "neighbourhood", "sub_city", "sub_city_unsure", "city", "latitude",
+_ALWAYS = ["source_url", "property_type", "location_code", "neighbourhood", "sub_city", "sub_city_unsure", "city", "latitude",
            "longitude", "probable_dup", "property_group"]
 _IF_READER = ["price", "currency", "listing_type", "area_sqm", "bedrooms", "scraped_at", "reader"]
 UPSERT = (
@@ -177,6 +181,37 @@ def read_csv(path):
     return [row_values(r) for r in csv.DictReader(open(path, encoding="utf-8"))]
 
 
+# Columns first created as short VARCHARs (13 Nov 2026) that now hold joined values such as
+# "under construction / probably off-plan". PostgreSQL will not change a column's type while
+# a view uses it, and this project never drops anything, so the view is pointed away from
+# these columns for a moment (CREATE OR REPLACE with NULL placeholders), the columns are
+# widened to TEXT, and the real view is put back, all inside one transaction.
+WIDEN = ["developer", "construction_status", "finish_level", "neighbourhood"]
+VIEW_PLACEHOLDER = VIEW
+for _c in WIDEN:
+    VIEW_PLACEHOLDER = VIEW_PLACEHOLDER.replace(f"string_agg(DISTINCT {_c}, ' / ')", "NULL::text")
+VIEW_PLACEHOLDER = VIEW_PLACEHOLDER.replace(
+    "bool_or(construction_status LIKE '%under construction%' OR construction_status LIKE '%probably off-plan%')",
+    "NULL::boolean")
+
+
+def widen_columns(cur):
+    """Make the WIDEN columns TEXT if they are not yet; returns how many were changed."""
+    cur.execute("SELECT column_name FROM information_schema.columns WHERE table_name = %s "
+                "AND column_name = ANY(%s) AND data_type <> 'text'", (TABLE, WIDEN))
+    narrow = [r[0] for r in cur.fetchall()]
+    if not narrow:
+        return 0
+    cur.execute("SELECT 1 FROM information_schema.views WHERE table_name = 'web_offplan_properties'")
+    has_view = cur.fetchone() is not None
+    if has_view:
+        cur.execute(VIEW_PLACEHOLDER)
+    for c in narrow:
+        cur.execute(f"ALTER TABLE {TABLE} ALTER COLUMN {c} TYPE TEXT")
+    cur.execute(VIEW)
+    return len(narrow)
+
+
 def upgrade(cur):
     """Add the new columns (if missing) and flag the old-reader ethiopiarealty rows."""
     for name, kind in NEW_COLUMNS:
@@ -231,6 +266,9 @@ def main():
             cur.execute(DDL)
             for name, kind in NEW_COLUMNS:
                 cur.execute(f"ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS {name} {kind}")
+            widened = widen_columns(cur)
+            if widened:
+                print(f"widened {widened} text column(s) to TEXT (no data changed)")
             cur.execute(f"SELECT COUNT(*) FROM {TABLE}")
             before = cur.fetchone()[0]
             execute_values(cur, UPSERT, rows, page_size=500)

@@ -53,6 +53,13 @@ since 2 Nov; the rest updated; nothing deleted).
 | With masked advert text | 61 (the local adverts; the scrape adds more) |
 | Texts still holding a phone-like number | 0 |
 
+**16 November 2026:** after a backup (`backups/ollaa_2026-11-16.dump`) the table holds
+**2,442 rows** (133 flagged `exact_repeat`, 709 `price_unusable`), 517 with masked advert
+text. Some off-plan adverts put a **price per m²** in the price field (e.g. 90,000–127,400
+birr for a flat); treat a "price" under 1 million birr for a flat as a price per m², not a
+total. 0 rows hold a phone-like number in the text or the address (7 addresses that
+contained one are stored masked).
+
 **Every price query should add** `WHERE NOT price_unusable AND NOT exact_repeat`.
 The sub-city of a row may change when the owner corrects the neighbourhood table; that is
 expected (the next load applies it).
