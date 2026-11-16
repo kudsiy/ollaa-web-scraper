@@ -441,3 +441,60 @@ Urael, Dembel, Lebu, Jemo, Gelan, Alem Bank, Garment, Signal, Bisrate Gabriel, B
   The start script now waits up to 15 minutes for the internet (and does nothing if it never
   comes), and the website's page list now gets the same one retry after a minute as single
   pages. The stop file stays until the owner says to clear it.
+
+## Owner's sub-city decisions and the price-per-m² fix (16 November 2026, evening)
+
+**Scrape resumed** on the owner's word: the stop of 16 Nov 19:00 (no internet at log-in,
+not a block) was cleared by renaming `SCRAPE_STOPPED.txt` and its log (kept, not deleted),
+and the BetDelala scrape restarted at 20:20 with the usual limits (500 pages today).
+
+**Owner's sub-city decisions** (entered as `owner_sub_city` in
+`data/neighbourhood_subcity.csv`; they beat every rule): Sarbet / Old Airport → **Kirkos**;
+Bulgaria → **Kirkos**; Awere → **Yeka**; Haya Hulet / 22 → **Bole**; Bole Arabsa →
+**Lemi Kura** (also written into `data/subcity_rules.csv`).
+
+**Price fix** (owner): some sale adverts put a **price per m²** in the site's price box,
+and the old reader then took the flat for a rental. Rule: a "price" of 20,000–400,000 birr
+on an advert that is clearly for sale (sale words in the text or address, a down payment,
+the same number stated as the price per m², or an off-plan advert) and does not mention
+renting is a price per m². It is now stored in `price_per_m2`; the original number is kept
+in `price_as_advertised`; the advert becomes a sale; and `price_basis` says where the price
+comes from: **"total as advertised"** (2,236 rows), **"calculated from price per m2"** (76
+rows: price per m² × the stated size) or **"price per m2 only (no size)"** (2 rows, no total).
+
+**Bole adverts changed by the price fix (before → after):**
+
+| Neighbourhood | Advert | Before | After: price per m² | Size | Total (calculated) | Note |
+|---|---|---|---|---|---|---|
+| Bole | luxury apartment … holiday discount | 125,000 (rent) | 125,000 | 281 m² | 35,125,000 | probably off-plan, payment terms |
+| Bole | 3 bed 153 m², Zemba / Gazebo | (new today) | 167,000 | 153 m² | 25,551,000 | |
+| Bole Bulbula | Enyi Real Estate, 3 bed | 80,000 (rent) | 80,000 | 136 m² | 10,880,000 | |
+| Bole Bulbula | Metro Real Estate, 3 bed | 127,400 (rent) | 127,400 | 68 m² | 8,663,200 | off-plan, terms; **check size**: the address says 130 m² (→ 16.6 million) |
+| Bole Japan | big holiday discount | 90,000 (rent) | 90,000 | 87 m² | 7,830,000 | under construction, terms |
+| Haya Hulet (22) | 3 bed 128 m² | 106,000 (rent) | 106,000 | 128 m² | 13,568,000 | probably off-plan, terms |
+| Haya Hulet (22) | 3 bed 163 m² | 120,000 (rent) | 120,000 | 163 m² | 19,560,000 | probably off-plan, terms |
+| Urael | private real estate | 80,000 (rent) | 80,000 | 18 m² | 1,440,000 | **check size**: 18 m² looks wrong |
+| Wello Sefer | Prime Real Estate, 1 bed | 80,000 (rent) | 80,000 | — | — (no size) | |
+
+After a backup (`backups/ollaa_2026-11-16b.dump`, checked) `web_listings` went from 2,442
+to **2,456 rows** (14 new from tonight's scrape; nothing deleted).
+
+### Off-plan apartments WITH payment terms, by sub-city (recount, 16 Nov evening)
+
+| Sub-city | Off-plan apartments with payment terms | Still unsure | Total price calculated from price per m² | With a usable total price and size |
+|---|---|---|---|---|
+| Kirkos | 42 | 1 | 16 | 41 |
+| Lemi Kura | 15 | 0 | 1 | 15 |
+| **Bole** | **14** | **0** | 5 | 11 |
+| Yeka | 11 | 1 | 6 | 11 |
+| Arada | 10 | 0 | 0 | 10 |
+| Kolfe | 3 | 2 | 1 | 3 |
+| Sheger | 2 | 2 | 0 | 2 |
+| No sub-city | 9 | (no place found 8, Bisrate Gabriel 1) | 3 | 9 |
+| **Total** | **106** | | | |
+
+**Bole's 14** (all now sure): Bole Bulbula 5, "Bole" 4, Haya Hulet (22) 2, Bole Adey Abeba 1,
+Bole Japan 1, Bole Michael 1. They state: developer 11, down payment % 14, instalment plan 1,
+handover date 2, a discount 5, seller's price per m² in the text 3 (and 5 more put it in the
+price box). **11 of the 14 now have a usable total price and size** (was 6).
+Comparison group: 96 ready Bole apartments for sale (total ≥ 1 million birr, 20–400 m²).

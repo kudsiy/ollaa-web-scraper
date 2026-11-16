@@ -60,6 +60,13 @@ birr for a flat); treat a "price" under 1 million birr for a flat as a price per
 total. 0 rows hold a phone-like number in the text or the address (7 addresses that
 contained one are stored masked).
 
+**Price per m² in the price box (fixed 16 Nov 2026, evening):** such numbers are now in
+`price_per_m2` (the original in `price_as_advertised`); `price` holds a total only, either
+as advertised or calculated from the price per m² × size — see `price_basis` ("total as
+advertised" 2,236 rows, "calculated from price per m2" 76, "price per m2 only (no size)" 2,
+where `price` is empty). Two calculated totals rest on a doubtful size (see
+`THESIS_DATA_CHECK.md`). Table: 2,456 rows after the backup `backups/ollaa_2026-11-16b.dump`.
+
 **Every price query should add** `WHERE NOT price_unusable AND NOT exact_repeat`.
 The sub-city of a row may change when the owner corrects the neighbourhood table; that is
 expected (the next load applies it).

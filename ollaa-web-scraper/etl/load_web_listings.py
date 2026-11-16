@@ -77,11 +77,14 @@ NEW_COLUMNS = [
     ("sub_city_unsure", "BOOLEAN"),
     ("property_group", "VARCHAR(16)"),
     ("exact_repeat", "BOOLEAN DEFAULT FALSE"),
+    ("price_basis", "TEXT"),
+    ("price_as_advertised", "NUMERIC(15,2)"),
+    ("price_per_m2", "NUMERIC(12,2)"),
 ]
 TERM_COLS = ["developer", "construction_status", "construction_progress_pct", "finish_level", "down_payment_pct",
              "down_payment_amount", "instalment_plan", "stage_linked", "bank_loan", "handover", "discount_schedule",
              "stated_price_per_m2", "price_per_m2_semi", "price_per_m2_full", "has_payment_terms"]
-BASE_COLS = ["source", "source_url", "price", "currency", "listing_type", "property_type", "area_sqm",
+BASE_COLS = ["source", "source_url", "price", "price_basis", "price_as_advertised", "price_per_m2", "currency", "listing_type", "property_type", "area_sqm",
              "bedrooms", "location_code", "neighbourhood", "sub_city", "sub_city_unsure", "city", "latitude",
              "longitude", "probable_dup", "property_group", "content_hash", "scraped_at"]
 YES_NO = ("probable_dup", "sub_city_unsure")
@@ -113,9 +116,11 @@ def row_values(r):
 # - advert text and terms are replaced only when the new row has text;
 # - price, size and the rest only when the new row was read by the new reader, which also
 #   clears the "price unusable" flag. Nothing is ever deleted.
-_ALWAYS = ["source_url", "property_type", "location_code", "neighbourhood", "sub_city", "sub_city_unsure", "city", "latitude",
+# price and sale/rent follow the preparation step (owner, 16 Nov 2026: a price per m2 in
+# the price box is never a total), so they are updated on every load as well
+_ALWAYS = ["source_url", "price", "price_basis", "price_as_advertised", "price_per_m2", "listing_type", "property_type", "location_code", "neighbourhood", "sub_city", "sub_city_unsure", "city", "latitude",
            "longitude", "probable_dup", "property_group"]
-_IF_READER = ["price", "currency", "listing_type", "area_sqm", "bedrooms", "scraped_at", "reader"]
+_IF_READER = ["currency", "area_sqm", "bedrooms", "scraped_at", "reader"]
 UPSERT = (
     f"INSERT INTO {TABLE} ({','.join(COLS)}) VALUES %s ON CONFLICT (content_hash) DO UPDATE SET "
     + ", ".join(f"{c} = EXCLUDED.{c}" for c in _ALWAYS) + ", "
@@ -153,7 +158,10 @@ SELECT property_group,
        MAX(stated_price_per_m2)                                   AS stated_price_per_m2,
        MAX(price_per_m2_semi)                                     AS price_per_m2_semi,
        MAX(price_per_m2_full)                                     AS price_per_m2_full,
-       bool_or(has_payment_terms)                                 AS has_payment_terms
+       bool_or(has_payment_terms)                                 AS has_payment_terms,
+       -- added 16 Nov 2026 (new view columns can only go at the end)
+       string_agg(DISTINCT price_basis, ' / ')                    AS price_basis,
+       MAX(price_per_m2)                                          AS price_per_m2_advertised
 FROM {TABLE}
 WHERE ad_text_masked IS NOT NULL AND property_group IS NOT NULL AND NOT COALESCE(exact_repeat, FALSE)
 GROUP BY property_group;

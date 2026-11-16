@@ -254,6 +254,52 @@ def build(rows, L, mapping, rules=(), extras=()):
     return out
 
 
+# Owner, 16 Nov 2026: some sale adverts put a PRICE PER m2 in the site's price box (e.g.
+# 90,000 birr for a flat). Such a number is stored as price_per_m2, never as the total; if
+# the size is known the total is calculated and marked "calculated from price per m2".
+PPM_LOW, PPM_HIGH = 20_000, 400_000          # birr per m2 for Addis homes
+SIZE_LOW, SIZE_HIGH = 15, 1_000              # m2 sizes trusted for the calculation
+SALE_WORDS = re.compile(r"for[\s-]*sa(?:le|ll)|for[\s-]*sell|ሽያጭ|የሚሸጥ|ይሸጣል|down[\s-]?payment|ቅድመ\s*ክፍያ", re.I)
+RENT_WORDS = re.compile(r"for[\s-]*rent|ኪራይ|የሚከራይ|ለኪራይ|per\s+month|/\s*month|በወር", re.I)
+BASIS_TOTAL = "total as advertised"
+BASIS_CALC = "calculated from price per m2"
+BASIS_PPM_ONLY = "price per m2 only (no size)"
+
+
+def is_price_per_m2(rec):
+    """True when the advertised 'price' is really a price per m2 (see above)."""
+    if rec["source"] == "ethiopiarealty" and not rec["reader"]:
+        return False                                     # old-reader price: wrong anyway, flagged
+    p = rec["price"]
+    if not p or not (PPM_LOW <= p <= PPM_HIGH):
+        return False
+    text = f"{rec['ad_text']} {slug_words(rec['source_url'])}"
+    if RENT_WORDS.search(text):
+        return False
+    terms = rec.get("_terms") or {}
+    stated = terms.get("stated_price_per_m2")
+    return bool(SALE_WORDS.search(text) or (stated and abs(float(stated) - p) < 1) or is_offplan(terms))
+
+
+def apply_price_basis(rec):
+    """Set price_basis / price_per_m2 / price_as_advertised; fix price and sale/rent."""
+    rec["price_as_advertised"] = rec["price"]
+    rec["price_per_m2"] = ""
+    rec["price_basis"] = BASIS_TOTAL if rec["price"] else ""
+    if is_price_per_m2(rec):
+        ppm = rec["price"]
+        rec["price_per_m2"] = ppm
+        rec["listing_type"] = "sale"
+        size = rec["area_sqm"]
+        if size and SIZE_LOW <= size <= SIZE_HIGH:
+            rec["price"] = round(ppm * size, 2)
+            rec["price_basis"] = BASIS_CALC
+        else:
+            rec["price"] = ""
+            rec["price_basis"] = BASIS_PPM_ONLY
+    return rec
+
+
 def drop_exact_repeats(rows):
     """Same site, type, place, price and size: keep the most complete copy, and give it the
     advert texts of all the copies (so no copy's terms are lost). Returns the kept rows and
@@ -362,7 +408,8 @@ def sitemap_urls(site="betdelala"):
     return [u for u in re.findall(r"<loc>\s*([^<]+?)\s*</loc>", f.read_text(encoding="utf-8")) if "/property/" in u]
 
 
-OUT_FIELDS = ["source", "source_url", "price", "currency", "listing_type", "property_type", "area_sqm", "bedrooms",
+OUT_FIELDS = ["source", "source_url", "price", "price_basis", "price_as_advertised", "price_per_m2", "currency",
+              "listing_type", "property_type", "area_sqm", "bedrooms",
               "location_code", "neighbourhood", "sub_city", "sub_city_unsure", "city", "latitude", "longitude",
               "probable_dup", "property_group", "content_hash", "scraped_at", "reader", "ad_text"]
 
@@ -374,6 +421,7 @@ def main():
     write_map(rows, L, mapping, sitemap_urls(), rules, extras)
     mapping = read_map()  # owner columns kept; rebuild sub-cities with the refreshed file
     rows = build(read_rows(), L, mapping, rules, extras)
+    rows = [apply_price_basis(r) for r in rows]
     rows, repeats = drop_exact_repeats(rows)
     dropped = len(repeats)
     groups = group_same_property(rows)

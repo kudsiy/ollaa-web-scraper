@@ -1,12 +1,12 @@
 neighbourhood,location_code,sub_city_used,owner_rule,place_list_sub_city,unsure,why_unsure,offplan_or_developer_adverts,owner_sub_city,owner_note
 Ayat,ayat_zone,Lemi Kura,starts with 'ayat',Bole,,,43,,
-Sarbet / Old Airport,sarbet_old_airport,Nifas Silk,,Nifas Silk,yes,Sarbet / Old Airport: Nifas Silk-Lafto or Kolfe,35,,
-Bulgaria,bulgaria,,,,yes,Bulgaria: Kirkos or Nifas Silk; not set in the place list,35,,
+Sarbet / Old Airport,sarbet_old_airport,Kirkos,owner's table cell,Nifas Silk,,,36,Kirkos,"owner, 16 Nov 2026"
+Bulgaria,bulgaria,Kirkos,owner's table cell,,,,35,Kirkos,"owner, 16 Nov 2026"
 Kazanchis,kazanchis,Kirkos,,Kirkos,,,29,,
 Bole Bulbula,bole_bulbula,Bole,starts with 'bole',Bole,,,27,,
-Awere,awere,,,,yes,no sub-city in the place list,25,,
-Bole,bole_main,Bole,starts with 'bole',Bole,,,21,,
-Piassa,piassa,Arada,,Arada,,,16,,
+Awere,awere,Yeka,owner's table cell,,,,25,Yeka,"owner, 16 Nov 2026"
+Bole,bole_main,Bole,starts with 'bole',Bole,,,22,,
+Piassa,piassa,Arada,,Arada,,,17,,
 Kirkos,kirkos,Kirkos,,Kirkos,,,12,,
 CMC,cmc_michael,Lemi Kura,starts with 'cmc',Yeka,,,11,,
 Lebu,lebu,Kolfe,,Kolfe,yes,Lebu: the place list says Kolfe; may be Nifas Silk-Lafto,10,,
@@ -30,7 +30,7 @@ Summit 72,summit_72,Lemi Kura,starts with 'summit',,,,2,,
 Figa,figa,Lemi Kura,starts with 'figa',,,,2,,
 Lafto,lafto,Nifas Silk,,Nifas Silk,,,2,,
 Ayer Tena,ayer_tena,Kolfe,,Kolfe,,,2,,
-Haya Hulet (22),haya_hulet,Bole,,Bole,yes,22 (Haya Hulet) is on the Bole / Yeka / Kirkos border,2,,
+Haya Hulet (22),haya_hulet,Bole,owner's table cell,Bole,,,2,Bole,"owner, 16 Nov 2026"
 Mexico,mexico,Kirkos,,Kirkos,yes,Mexico square is on the Kirkos / Lideta border,2,,
 Signal,signal,,,,yes,no sub-city in the place list,2,,
 Bole Rwanda,bole_rwanda,Bole,starts with 'bole',Bole,,,2,,
@@ -50,6 +50,8 @@ Lideta,lideta,Lideta,,Lideta,,,1,,
 Dembel,dembel,,,,yes,Dembel (Bole road): Kirkos or Bole; not set in the place list,1,,
 La Gare,la_gare,Kirkos,,Kirkos,yes,no sub-city in the place list,1,,
 Merkato,merkato,Addis Ketema,,Addis Ketema,,,1,,
+Mekanisa / Abo Mazoria,mekanisa_abo,Nifas Silk,,Nifas Silk,,,1,,
 Imperial,imperial,Yeka,,Yeka,yes,Imperial is near the Bole / Yeka border,1,,
 Sidist Kilo,6kilo,Gulele,,Gulele,,,1,,
 Atlas,bole_atlas,Bole,starts with 'bole',Bole,,,1,,
+Bole Arabsa,bole_arabsa,,,,,,0,Lemi Kura,"owner, 16 Nov 2026"

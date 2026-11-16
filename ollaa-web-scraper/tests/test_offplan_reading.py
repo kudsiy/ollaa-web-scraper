@@ -245,7 +245,7 @@ def test_runner_marks_finished(monkeypatch, tmp_path):
 
 
 def test_owner_subcity_rules():
-    """Owner, 16 Nov 2026: Bole* (except Bole Arabsa) and Gerji -> Bole; Ayat, Summit,
+    """Owner, 16 Nov 2026: Bole* (except Bole Arabsa -> Lemi Kura) and Gerji -> Bole; Ayat, Summit,
     Feyel Bet, Figa, CMC, Wesen, Safari, Yetebaberut, Gurd Shola -> Lemi Kura."""
     import re
     from types import SimpleNamespace as NS
@@ -264,7 +264,7 @@ def test_owner_subcity_rules():
     rules, extras = P.read_rules(), P.read_extras()
     sub = lambda code: P.decide_sub_city(L, code, {}, rules, extras)[0]  # noqa: E731
     assert sub("bole_bulbula") == sub("bole_atlas") == sub("gerji") == "Bole"
-    assert sub("bole_arabsa") == "" and P.decide_sub_city(L, "bole_arabsa", {}, rules, extras)[1] is True
+    assert sub("bole_arabsa") == "Lemi Kura"  # owner, 16 Nov 2026: not Bole, Lemi Kura
     assert sub("cmc_michael") == sub("ayat_zone") == sub("gurd_shola") == "Lemi Kura"
     assert sub("sholla") == "Yeka" and sub("kazanchis") == "Kirkos"
     for words, name in [("3 bedroom yetebaberut cmc", "Yetebaberut"), ("ፍየል ቤት አካባቢ", "Feyel Bet"), ("safari area", "Safari")]:
@@ -303,3 +303,23 @@ def test_sitemap_connection_drop_gets_one_retry(monkeypatch, tmp_path):
     status = scrape_site.run("site", "https://x.invalid/sitemap.xml", 5)
     assert status.startswith("stopped") and "after one retry" in status
     assert len(calls) == 2 and waits == [scrape_site.RETRY_WAIT]
+
+
+def test_price_per_m2_in_the_price_box():
+    """Owner, 16 Nov 2026: a price per m2 in the price box is stored as price per m2; the
+    total is calculated (and marked) only when the size is known."""
+    from etl import prepare_web_listings as P
+    r = dict(_row("https://x.invalid/property/apartment-for-sale-3-bedroom-128-sqm", 106000.0, 128.0, 3), listing_type="rent")
+    out = P.apply_price_basis(r)
+    assert out["price_per_m2"] == 106000.0 and out["price"] == 106000.0 * 128 and out["listing_type"] == "sale"
+    assert out["price_basis"] == P.BASIS_CALC and out["price_as_advertised"] == 106000.0
+    r = dict(_row("https://x.invalid/property/apartment-for-sale-1-bedroom", 80000.0, ""), listing_type="rent")
+    out = P.apply_price_basis(r)
+    assert out["price"] == "" and out["price_per_m2"] == 80000.0 and out["price_basis"] == P.BASIS_PPM_ONLY
+    # a real rent, a real total, and an old ethiopiarealty price are left alone
+    rent = dict(_row("https://x.invalid/property/apartment-for-rent-bole", 50000.0, 112.0), listing_type="rent")
+    assert P.apply_price_basis(rent)["price"] == 50000.0 and rent["price_basis"] == P.BASIS_TOTAL
+    total = _row("https://x.invalid/property/apartment-for-sale-ayat", 9000000.0, 90.0)
+    assert P.apply_price_basis(total)["price"] == 9000000.0 and total["price_per_m2"] == ""
+    old = _row("https://e.invalid/property/flat-for-sale", 30000.0, 100.0, src="ethiopiarealty")
+    assert P.apply_price_basis(old)["price"] == 30000.0

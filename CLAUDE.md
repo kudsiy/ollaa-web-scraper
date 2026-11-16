@@ -70,7 +70,10 @@ Ollaa-Telegram scraper depends on it. Protecting it comes before everything else
 - `web_listings` rows with `price_unusable = TRUE` (ethiopiarealty rows read by the old
   reader) must never be used for prices until re-scraped with the fixed reader; rows with
   `exact_repeat = TRUE` are repeat copies. Price queries add
-  `WHERE NOT price_unusable AND NOT exact_repeat`.
+  `WHERE NOT price_unusable AND NOT exact_repeat`. `price` is always a total: when an advert's price box held a
+  price per m² it is in `price_per_m2`, and `price_basis` says whether the total was
+  advertised or calculated from the price per m² (owner, 16 Nov 2026). Never store a price
+  per m² as a total.
 - Sub-cities come from `ollaa-web-scraper/data/neighbourhood_subcity.csv`; the owner's
   column `owner_sub_city` always wins (owner works in land administration; the thesis uses
   the official Bole Sub-City boundary). Never overwrite the owner's columns.
