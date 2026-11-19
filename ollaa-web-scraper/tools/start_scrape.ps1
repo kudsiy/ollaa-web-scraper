@@ -16,6 +16,16 @@ if ($running) { Say "already running (pid $($running.ProcessId -join ', ')); not
 foreach ($marker in "SCRAPE_STOPPED.txt", "SCRAPE_FINISHED.txt") {
     if (Test-Path (Join-Path $pages $marker)) { Say "not starting: $marker exists"; exit 0 }
 }
+# At most one share per day: the task also runs after the laptop wakes up and at log-in
+# (catch-up, added 19 Nov 2026 after three evenings asleep at 21:00), so skip if today's
+# share is already in the daily log.
+$dailyLog = Join-Path $pages "daily_log.csv"
+if (Test-Path $dailyLog) {
+    $today = Get-Date -Format "yyyy-MM-dd"
+    $doneToday = Import-Csv $dailyLog | Where-Object { $_.date -eq $today -and ($_.status -eq "cap" -or $_.status -eq "finished") }
+    if ($doneToday) { Say "today's share already done; nothing to do"; exit 0 }
+}
+
 $stoppedLog = Get-ChildItem $pages -Filter "run_until_done_*.log" | Where-Object { Select-String -Path $_.FullName -Pattern "STOPPED for good" -Quiet }
 if ($stoppedLog) {
     Set-Content -Path (Join-Path $pages "SCRAPE_STOPPED.txt") -Value "found 'STOPPED for good' in $($stoppedLog[0].Name)" -Encoding utf8

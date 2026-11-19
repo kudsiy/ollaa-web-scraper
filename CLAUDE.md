@@ -95,8 +95,10 @@ Ollaa-Telegram scraper depends on it. Protecting it comes before everything else
   re-read; 500 pages/site/day; stops for good at the first block or error. Loading is a
   separate step: `etl/prepare_web_listings.py`, backup, `etl/load_web_listings.py --apply`.
 - The Windows task `OllaaWebScrape` (owner, 16 Nov 2026) runs `tools/start_scrape.ps1`
-  **once a day at 21:00** (or as soon as the laptop is on, if it was off): it waits up to 15
-  minutes for the internet, then runs `tools/run_until_done.py --live --once` (one day's
+  **once a day at 21:00**, and as a catch-up 3 minutes after the laptop wakes from sleep or
+  the owner logs in (added 19 Nov 2026: Windows' own "run when available" did not catch up
+  after sleep, so 17–19 Nov were missed); it skips if today's share is already in the daily
+  log, then waits up to 15 minutes for the internet, then runs `tools/run_until_done.py --live --once` (one day's
   share, at most 500 pages per site) unless it is already running or has stopped. Each run
   adds a line to `saved_pages/daily_log.csv`. A stop is final: the runner writes
   `saved_pages/SCRAPE_STOPPED.txt` (or `SCRAPE_FINISHED.txt`) and nothing restarts while it

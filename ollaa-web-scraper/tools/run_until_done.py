@@ -31,6 +31,7 @@ import scrape_site  # noqa: E402
 
 STOP_FILE = scrape_site.pg.BASE / "SCRAPE_STOPPED.txt"
 DAILY_LOG = scrape_site.pg.BASE / "daily_log.csv"
+RUN_STARTED = None
 LOG_FIELDS = ["date", "time", "site", "pages_read", "new_listings", "re_reads", "still_to_read", "status", "error"]
 
 
@@ -38,7 +39,7 @@ def log_day(status):
     """One short line per site per run in saved_pages/daily_log.csv."""
     import csv  # noqa: PLC0415
     r = scrape_site.LAST_RUN
-    now = datetime.datetime.now()
+    now = RUN_STARTED or datetime.datetime.now()  # the day the run started counts as its day
     new_file = not DAILY_LOG.exists()
     with open(DAILY_LOG, "a", newline="", encoding="utf-8") as fh:
         w = csv.DictWriter(fh, fieldnames=LOG_FIELDS)
@@ -71,6 +72,8 @@ def main():
     if "--live" not in sys.argv:
         print("This visits live websites. Run it only with the owner's approval, adding --live.")
         return 2
+    global RUN_STARTED
+    RUN_STARTED = datetime.datetime.now()
     for marker in (STOP_FILE, DONE_FILE):
         if marker.exists():
             print(f"Not starting: {marker.name} exists ({marker.read_text(encoding='utf-8').strip()[:200]}).")

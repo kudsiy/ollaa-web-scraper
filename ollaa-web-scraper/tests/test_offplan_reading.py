@@ -10,6 +10,18 @@ from parsers.offplan_terms import extract_terms, offplan_url_signal
 from tools import pilot_generic as pg
 from tools import scrape_site
 
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _runner_files_in_tmp(monkeypatch, tmp_path):
+    """No test may write the real daily log or stop files (on 16 Nov 2026 three tests left
+    junk lines in saved_pages/daily_log.csv)."""
+    from tools import run_until_done as R
+    monkeypatch.setattr(R, "DAILY_LOG", tmp_path / "daily_log.csv")
+    monkeypatch.setattr(R, "STOP_FILE", tmp_path / "SCRAPE_STOPPED.txt")
+    monkeypatch.setattr(R, "DONE_FILE", tmp_path / "SCRAPE_FINISHED.txt")
+
 
 # ------------------------------------------------------------------ masking
 def test_phone_numbers_are_masked_in_every_common_form():

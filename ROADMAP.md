@@ -20,8 +20,9 @@ Only maintenance; no new features:
 
 1. **Keep the approved scrape running** within the polite limits: BetDelala first; when it
    is finished, the approved **ethiopiarealty re-scrape** with the fixed price reader.
-   It runs **once a day at 21:00** (Windows task `OllaaWebScrape`; if the laptop is off at
-   that time, it runs as soon as the laptop is on), waits for the internet, does at most
+   It runs **once a day at 21:00** (Windows task `OllaaWebScrape`); if the laptop is
+   asleep or off then, it catches up 3 minutes after the laptop wakes or the owner logs in
+   (never more than one share a day). It waits for the internet, does at most
    500 pages per site, and **stops for good at the first block or error**. Each run adds a
    line to `ollaa-web-scraper/saved_pages/daily_log.csv` (pages read, new listings,
    re-reads, still to read, error).
@@ -31,6 +32,8 @@ Only maintenance; no new features:
 3. Fix data problems the owner points out (as with the two sizes on 16 Nov), always
    after a backup and recorded in `ollaa-web-scraper/data/manual_corrections.csv`.
 
+19 Nov 2026: no pages were read on 17–18 Nov and on 19 Nov until 22:57 (the laptop was asleep at 21:00 and
+the catch-up did not exist yet); fixed the same evening.
 Progress on 16 Nov 2026: BetDelala 2,482 of 4,244 pages read (1,778 left, about 4 days);
 then ethiopiarealty about 1,600 pages (about 4 days). `web_listings`: 2,889 rows.
 
