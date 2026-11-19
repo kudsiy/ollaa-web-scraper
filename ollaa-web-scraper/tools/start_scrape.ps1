@@ -45,6 +45,9 @@ if (-not $online) { Say "no internet after 15 minutes; not starting this time"; 
 $python = (Get-Command python -ErrorAction SilentlyContinue).Source
 if (-not $python) { Say "python not found"; exit 1 }
 $day = Get-Date -Format "yyyy-MM-dd"
-$cmd = "cmd.exe /c `"`"$python`" -u -W ignore tools\run_until_done.py --live --once >> saved_pages\run_until_done_$day.log 2>> saved_pages\run_until_done_$day.err`""
+$cmd = "cmd.exe /c `"`"$python`" -u -W ignore tools\run_until_done.py --live --once >> saved_pages\run_until_done_$day.log 2>> saved_pages\run_until_done_$day.err & echo python exit code %errorlevel% >> saved_pages\run_until_done_$day.err`""
 $r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $cmd; CurrentDirectory = $wd }
-Say "started (result $($r.ReturnValue), pid $($r.ProcessId))"
+Say "started (result $($r.ReturnValue), pid $($r.ProcessId), python $python)"
+Start-Sleep -Seconds 20
+$alive = Get-CimInstance Win32_Process | Where-Object { $_.Name -like "python*" -and $_.CommandLine -match "run_until_done\.py" }
+if ($alive) { Say "running after 20 s (pid $($alive.ProcessId -join ', '))" } else { Say "NOT running after 20 s - see saved_pages\run_until_done_$day.err" }
