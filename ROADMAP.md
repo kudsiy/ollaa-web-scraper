@@ -25,13 +25,16 @@ Only maintenance; no new features:
    (never more than one share a day). It waits for the internet, does at most
    500 pages per site, and **stops for good at the first block or error**. Each run adds a
    line to `ollaa-web-scraper/saved_pages/daily_log.csv` (pages read, new listings,
-   re-reads, still to read, error).
+   re-reads, removed adverts, still to read, error). A "page not found" (advert
+   taken down) is logged and skipped; any other bad answer still stops the run.
 2. **Load the new pages into `web_listings`** when the owner asks (backup first, never
    between 10:00 and 12:00): `etl/prepare_web_listings.py`, then
    `etl/load_web_listings.py --apply`.
 3. Fix data problems the owner points out (as with the two sizes on 16 Nov), always
    after a backup and recorded in `ollaa-web-scraper/data/manual_corrections.csv`.
 
+20 Nov 2026: BetDelala 2,892 of 4,314 pages read; the 19 Nov share stopped at a removed advert (404). Owner: skip
+removed adverts (logged), so the scrape resumed on 20 Nov.
 19 Nov 2026: no pages were read on 17–18 Nov and on 19 Nov until 22:57 (the laptop was asleep at 21:00 and
 the catch-up did not exist yet); fixed the same evening.
 Progress on 16 Nov 2026: BetDelala 2,482 of 4,244 pages read (1,778 left, about 4 days);

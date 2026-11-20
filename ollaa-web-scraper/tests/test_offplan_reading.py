@@ -389,3 +389,30 @@ def test_run_records_pages_and_new_listings(monkeypatch, tmp_path):
     status = scrape_site.run("site", "https://x.invalid/sitemap.xml", 10)
     r = scrape_site.LAST_RUN
     assert status.startswith("stopped") and r["read"] == 2 and r["new"] == 2 and "403" in r["error"]
+
+
+def test_removed_advert_is_skipped_and_never_asked_again(monkeypatch, tmp_path):
+    """Owner, 20 Nov 2026: a 404/410 is an advert taken down: log it, skip it, go on."""
+    urls = _fake_site(monkeypatch, tmp_path, [200, 404, 200])
+    status = scrape_site.run("site", "https://x.invalid/sitemap.xml", 10)
+    assert status == "finished" and scrape_site.LAST_RUN["read"] == 2 and scrape_site.LAST_RUN["removed"] == 1
+    removed = (tmp_path / "site" / "removed.log").read_text(encoding="utf-8")
+    assert urls[1] in removed and "HTTP 404" in removed
+    asked = []
+    monkeypatch.setattr(scrape_site, "fetch_with_one_retry", lambda u: asked.append(u) or (None, "should not be called"))
+    assert scrape_site.run("site", "https://x.invalid/sitemap.xml", 10) == "finished" and asked == []
+
+
+def test_many_removed_in_a_row_still_stops(monkeypatch, tmp_path):
+    _fake_site(monkeypatch, tmp_path, [404] * (scrape_site.MAX_REMOVED_IN_A_ROW + 5))
+    status = scrape_site.run("site", "https://x.invalid/sitemap.xml", 100)
+    assert status.startswith("stopped") and "in a row not found" in status
+    assert scrape_site.LAST_RUN["removed"] == scrape_site.MAX_REMOVED_IN_A_ROW
+
+
+def test_other_bad_status_still_stops(monkeypatch, tmp_path):
+    for code in (500, 403, 429):
+        sub = tmp_path / str(code)
+        _fake_site(monkeypatch, sub, [200, code, 200])
+        status = scrape_site.run("site", "https://x.invalid/sitemap.xml", 10)
+        assert status.startswith("stopped") and str(code) in status, (code, status)

@@ -1,7 +1,8 @@
 """Resumable, capped, polite full scrape of a GO site (task W16, owner approved the birr
 sites 1 Nov 2026). Reuses the recon helpers. For each site: gather listing URLs from the
 sitemap, skip the ones already done, read up to BATCH new ones with a random 3-6 s pause,
-honest UA, read-only, and STOP at the first block, challenge or error (never bypass). A
+honest UA, read-only, and STOP at the first block, challenge or error (never bypass); only a
+"page not found" (404/410, an advert taken down) is logged as removed and skipped. A
 connection drop or timeout is retried once after a minute (owner, 13 Nov 2026); a second
 failure in a row stops the run, and a block, challenge or bad status is never retried.
 Appends structured fields and the advert's own text, with every phone number, e-mail and
@@ -34,8 +35,14 @@ GAP_MIN = float(os.getenv("OLLAA_GAP_MIN", "3"))  # seconds between requests (ra
 GAP_MAX = float(os.getenv("OLLAA_GAP_MAX", "6"))
 FIELDS = ["source", "url", "price", "currency", "area_sqm", "bedrooms", "place", "listing_type", "scraped_at",
           "ad_text", "reader"]
-READER = "v2-2026-11-13"
-LAST_RUN = {}  # what the last run() did: pages read, new listings, re-reads, still to read, error  # v2: details-box price (ethiopiarealty fix) + masked advert text
+READER = "v2-2026-11-13"  # v2: details-box price (ethiopiarealty fix) + masked advert text
+LAST_RUN = {}  # what the last run() did: pages read, new listings, re-reads, removed, still to read, error
+# Owner, 20 Nov 2026: "page not found" (404) or "gone" (410) means the advert was taken down
+# after the sitemap listed it. It is logged as removed (saved_pages/<site>/removed.log),
+# never asked for again, and the run goes on. Every other bad status still stops the run.
+# Many in a row would mean the site changed, so that still stops.
+REMOVED_STATUS = (404, 410)
+MAX_REMOVED_IN_A_ROW = 20
 RETRY_WAIT = 60  # seconds before the one retry after a connection drop or timeout
 TRANSIENT = (requests.exceptions.ConnectionError, requests.exceptions.Timeout)
 
@@ -88,7 +95,7 @@ def run(label, sitemap, batch, reread_old=False):
     connection failure: the caller must not continue)."""
     print(f"\n===== {label}" + (" (re-reading old pages with the new reader)" if reread_old else ""))
     LAST_RUN.clear()
-    LAST_RUN.update(site=label, read=0, new=0, reread=0, left="", error="")
+    LAST_RUN.update(site=label, read=0, new=0, reread=0, removed=0, left="", error="")
     out = pg.BASE / label
     out.mkdir(parents=True, exist_ok=True)
     csv_file, done_log = out / "full_v2.csv", out / "done.log"
@@ -122,6 +129,12 @@ def run(label, sitemap, batch, reread_old=False):
     have_text = set()
     if csv_file.exists():
         have_text = {r["url"] for r in csv.DictReader(open(csv_file, encoding="utf-8")) if r.get("reader") == READER}
+    removed_log = out / "removed.log"
+    removed = set()
+    if removed_log.exists():
+        removed = {ln.split("\t")[1] for ln in removed_log.read_text(encoding="utf-8").splitlines() if "\t" in ln}
+    done |= removed        # a removed advert is never asked for again,
+    have_text |= removed   # not even by the off-plan-first re-read
     cap_left = DAILY_CAP - today_count(done_log)
     todo = plan_order(urls, done, have_text, batch, cap_left, reread_old)
     n_first = sum(1 for u in todo if offplan_url_signal(u) and u not in have_text)
@@ -134,8 +147,9 @@ def run(label, sitemap, batch, reread_old=False):
         return "cap" if left else "finished"
 
     new_file = not csv_file.exists()
-    rows, stopped = [], None
-    with open(csv_file, "a", newline="", encoding="utf-8") as fh, open(done_log, "a", encoding="utf-8") as dl:
+    rows, stopped, gone, gone_in_a_row = [], None, [], 0
+    with open(csv_file, "a", newline="", encoding="utf-8") as fh, open(done_log, "a", encoding="utf-8") as dl, \
+            open(removed_log, "a", encoding="utf-8") as rl:
         w = csv.DictWriter(fh, fieldnames=FIELDS)
         if new_file:
             w.writeheader()
@@ -148,6 +162,20 @@ def run(label, sitemap, batch, reread_old=False):
             if pg.blocked(r):
                 stopped = f"block/challenge at #{i} (HTTP {r.status_code}) — stopping, not bypassing"
                 break
+            if r.status_code in REMOVED_STATUS:
+                gone.append(u)
+                gone_in_a_row += 1
+                today = datetime.date.today().isoformat()
+                rl.write(f"{today}\t{u}\tHTTP {r.status_code}\n")
+                rl.flush()
+                dl.write(f"{today}\t{u}\n")  # counts toward the daily cap: it was a request
+                dl.flush()
+                print(f"  #{i}: advert removed (HTTP {r.status_code}), skipped", flush=True)
+                if gone_in_a_row >= MAX_REMOVED_IN_A_ROW:
+                    stopped = f"{gone_in_a_row} pages in a row not found at #{i} — the site may have changed"
+                    break
+                continue
+            gone_in_a_row = 0
             if r.status_code != 200:
                 stopped = f"HTTP {r.status_code} at #{i}"
                 break
@@ -166,14 +194,16 @@ def run(label, sitemap, batch, reread_old=False):
                 print(f"  ... {i}/{len(todo)} done", flush=True)
 
     n = len(rows)
-    print(f"  fetched {n} this run" + (f"; STOPPED: {stopped}" if stopped else ""))
+    print(f"  fetched {n} this run" + (f"; {len(gone)} removed adverts skipped" if gone else "")
+          + (f"; STOPPED: {stopped}" if stopped else ""))
     if n:
         p = lambda k: f"{100*sum(1 for r in rows if str(r[k]).strip())//n}%"
         print(f"    price {p('price')} | size {p('area_sqm')} | location {p('place')} | bedrooms {p('bedrooms')}")
-    read_now = {r["url"] for r in rows}
+    read_now = {r["url"] for r in rows} | set(gone)
     left = plan_order(urls, done | read_now, have_text | read_now, 10**9, 10**9, reread_old)
     print(f"  total done for {label}: {len(done | read_now)} / {len(urls)}; still to read: {len(left)}")
-    LAST_RUN.update(read=n, new=sum(1 for u in read_now if u not in done), left=len(left), error=stopped or "")
+    n_new = sum(1 for r in rows if r["url"] not in done)
+    LAST_RUN.update(read=n, new=n_new, removed=len(gone), left=len(left), error=stopped or "")
     LAST_RUN["reread"] = n - LAST_RUN["new"]
     if stopped:
         return f"stopped: {stopped}"

@@ -15,8 +15,8 @@ when all is done) and refuses to start while either file exists, so the at-logon
 owner (or Claude, on the owner's word after checking the reason) removes the file.
 
 Daily mode (owner, 16 Nov 2026): with --once it does one day's share and exits, adding a
-line to saved_pages/daily_log.csv (date, site, pages read, new listings, re-reads, still to
-read, status, error). The Windows task "OllaaWebScrape" runs it once a day at a fixed time
+line to saved_pages/daily_log.csv (date, site, pages read, new listings, re-reads, removed
+adverts, still to read, status, error). The Windows task "OllaaWebScrape" runs it once a day at a fixed time
 through tools/start_scrape.ps1, which first waits for the internet.
 
 usage: python tools/run_until_done.py --live [--once]      (from ollaa-web-scraper)
@@ -32,7 +32,8 @@ import scrape_site  # noqa: E402
 STOP_FILE = scrape_site.pg.BASE / "SCRAPE_STOPPED.txt"
 DAILY_LOG = scrape_site.pg.BASE / "daily_log.csv"
 RUN_STARTED = None
-LOG_FIELDS = ["date", "time", "site", "pages_read", "new_listings", "re_reads", "still_to_read", "status", "error"]
+LOG_FIELDS = ["date", "time", "site", "pages_read", "new_listings", "re_reads", "removed_adverts", "still_to_read",
+              "status", "error"]
 
 
 def log_day(status):
@@ -47,6 +48,7 @@ def log_day(status):
             w.writeheader()
         w.writerow({"date": f"{now:%Y-%m-%d}", "time": f"{now:%H:%M}", "site": r.get("site", ""),
                     "pages_read": r.get("read", 0), "new_listings": r.get("new", 0), "re_reads": r.get("reread", 0),
+                    "removed_adverts": r.get("removed", 0),
                     "still_to_read": r.get("left", ""), "status": status.split(":")[0],
                     "error": (r.get("error") or "")[:200]})
 

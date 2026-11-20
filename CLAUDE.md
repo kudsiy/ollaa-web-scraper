@@ -70,6 +70,10 @@ Ollaa-Telegram scraper depends on it. Protecting it comes before everything else
   never retries those. Only a connection drop or timeout is retried, once, after a minute; a
   second failure in a row stops the run (owner, 13 November 2026; checked by
   `tests/test_scraper_retry.py`). Never add more retries or shorten the wait.
+- Exception (owner, 20 Nov 2026): "page not found" (HTTP 404) or "gone" (410) means the
+  advert was taken down after the sitemap listed it. It is logged in
+  `saved_pages/<site>/removed.log`, never asked for again, and the run goes on; 20 in a row
+  still stops the run (the site may have changed). Every other bad status still stops.
 - Never store an unmasked phone number anywhere (owner, 13 November 2026): advert text is
   stored only after `parsers/contact_mask.py` has replaced phones, e-mails and chat handles
   with `<contact>` (the scraper masks it, the loader masks it again; checked by
